@@ -3,9 +3,14 @@
 # General imports
 import numpy as np
 import random as rand
-import matplotlib.pyplot as plt
-import matplotlib.animation as anim
 import time
+import sys
+
+# Plotting imports
+# import matplotlib.pyplot as plt
+# import matplotlib.animation as anim
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore, QtGui
 
 # Networking imports
 from pylsl import StreamInlet, resolve_stream
@@ -15,7 +20,9 @@ from pylsl import StreamInfo, StreamOutlet, local_clock
 import psychopy as pp
 
 # Function that allows the software to simulate a Lab Streaming Layer streaming output
-def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_size = 360):
+def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_size = 360, \
+    dtype = "random"):
+
     """ 
     Here we create a data stream output so that we can test the rest of the networking
     properties without having a proper output, like the one from Cognionics DAQ software.
@@ -35,13 +42,16 @@ def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_siz
         chunk_size: If the samples are going to be sent in chunks of data, then change this
             number to how many samples per chunk
         buffer_size: The size of the buffer (in seconds) that will hold the data
+        dtype: "random" or "sinusoid" to choose which type of data will be sent (random is 
+            the default)
 
     OUTPUT: There's no output.
     """
 
     # Here we define some metadata of the stream (Name, type, number of channels,
     # frequency, data type and serial number/unique identifier).
-    stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, frequency, "float32", "myuid000000")
+    stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, frequency,\
+        "float32", "myuid000000")
 
     # Attach some extra meta-data (accordance with XDF format)
     channels_handle = stream_info.desc().append_child("channels")
@@ -66,8 +76,13 @@ def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_siz
     while True:
         # Get the timestamp with t0 as a reference for initial time
         stamp = local_clock() - t0
+
         # Here we create the sample with random data
-        sample = list(np.random.rand(channels + 5))
+        if dtype == "random":
+            sample = list(np.random.rand(channels + 5))
+        elif dtype == "sinusoid":
+            sample = [np.sin(500*stamp)] * (channels + 5)
+
         # Now we send it and wait to send the next one
         outlet.push_sample(sample, stamp)
         time.sleep(1/frequency)
@@ -119,11 +134,6 @@ def connect_by_lsl(**kwargs):
     metainfo = inlet.info()
     print("The stream's XML meta-data is: ")
     print(metainfo.as_xml())
-    print("The channels' labels are as follows:")
-    chan = metainfo.desc().child("chanels").child("channel")
-    for _ in range(metainfo.channel_count()):
-        print(" " + chan.child_value("label"))
-        chan = chan.next_sibling()
 
     # Return said inlet
     return inlet 
@@ -139,7 +149,50 @@ if __name__ == "__main__":
     # Get the number of channels from the inlet to use later
     channelsn = inlet.info().channel_count()
 
-    # Create the figure we're going. We're going to use a different subplot
+    # Create the PyQtGraph window
+    plot_duration = 5
+    win = pg.GraphicsWindow()
+    win.setWindowTitle("LSL Plot " + inlet.info().name())
+    plt = win.addPlot()
+    plt.setLimits(xMin = 0.0, xMax = plot_duration, yMin = -1.0 * \
+        (inlet.channel_count - 1), yMax = 1.0)
+    
+    t0 = [local_clock()] * inlet.channel_count
+    curves = []
+    for ch_ix in range(inlet.channel_count):
+        curves += [plt.plot()]
+
+    def update():
+        # Be able to modify this global variables
+        global inlet, curves, t0
+        chunk, timestamps = inlet.pull_chunk(timeout = 0.0)
+        if timestamps:
+            timestamps = np.asarray(timestamps)
+            y = np.asarray(chunk)
+
+            for ch_ix in range(inlet.channel_count):
+                old_x, old_y = curves[ch_ix].getData()
+                if old_x is not None:
+                    old_x += t0[ch_ix]
+                    this_x = np.hstack((old_x, timestamps))
+                    this_y = np.hstack((old_y, y[:, ch_ix] - ch_ix))
+                else:
+                    this_x = timestamps
+                    this_y = y[:, ch_ix] - ch_ix
+                t0[ch_ix] = this_x[-1] - plot_duration
+                this_x -= t0[ch_ix]
+                b_keep = this_x >= 0
+                curves[ch_ix].setData(this_x[b_keep], this_y[b_keep])
+
+    timer = QtCore.QTimer()
+    timer.timeout.connect(update)
+    timer.start(2)
+    QtGui.QApplication.instance().exec_()
+
+
+
+
+    """  Create the figure we're going. We're going to use a different subplot
     #   for each channel.
     fig, ax = plt.subplots(channelsn, 1, facecolor = "white", figsize = (12, 10))        
 
@@ -181,3 +234,4 @@ if __name__ == "__main__":
     animation = anim.FuncAnimation(fig, pull_and_draw, interval = 2)
     plt.show()
         
+ """
