@@ -106,6 +106,12 @@ class lsl_stream(object):
             the data from the stream
         """
         # Retrieve data from the data stream
+        return self.inlet.pull_sample(**kwargs)
+
+    def chunk(self, **kwargs):
+        """
+        This method pulls chunks. Uses sames formating as .pull
+        """
         return self.inlet.pull_chunk(**kwargs)
 
 
