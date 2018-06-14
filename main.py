@@ -98,5 +98,47 @@ if __name__ == "__main__":
     data_stream = lsl_stream(type="EEG")
 
     # Get the number of channels from the inlet to use later
-    channelsn = data_stream.inlet.info().channel_count()
+    channelsn = data_stream.inlet.channel_count
     print("Number of channels on the stream: {0}".format(channelsn))
+
+    # Create the PyQtGraph window
+    plot_duration = 2.5
+    win = pg.GraphicsWindow()
+    win.setWindowTitle("LSL Plot " + data_stream.inlet.info().name())
+    plt = win.addPlot()
+    plt.setLimits(xMin = 0.0, xMax = plot_duration, yMin = -1.0 * \
+        (data_stream.inlet.channel_count - 1), yMax = 1.0)
+    
+    t0 = [local_clock()] * data_stream.inlet.channel_count
+    curves = []
+    for ch_ix in range(data_stream.inlet.channel_count):
+        curves += [plt.plot()]
+    inlet = data_stream.inlet
+
+    def update():
+        # Be able to modify this global variables
+        global curves, t0
+        chunk, timestamps = data_stream.chunk(timeout = 0.0)
+        if timestamps:
+            # print(chunk)
+            timestamps = np.asarray(timestamps)
+            y = np.asarray(chunk)
+
+            for ch_ix in range(data_stream.inlet.channel_count):
+                old_x, old_y = curves[ch_ix].getData()
+                if old_x is not None:
+                    old_x += t0[ch_ix]
+                    this_x = np.hstack((old_x, timestamps))
+                    this_y = np.hstack((old_y, y[:, ch_ix] - ch_ix))
+                else:
+                    this_x = timestamps
+                    this_y = y[:, ch_ix] - ch_ix
+                t0[ch_ix] = this_x[-1] - plot_duration
+                this_x -= t0[ch_ix]
+                b_keep = this_x >= 0
+                curves[ch_ix].setData(this_x[b_keep], this_y[b_keep])
+
+    timer = QtCore.QTimer()
+    timer.timeout.connect(update)
+    timer.start(4)
+    QtGui.QApplication.instance().exec_()
