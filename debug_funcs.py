@@ -11,11 +11,9 @@ import time
 # Networking imports
 from pylsl import StreamInfo, StreamOutlet, local_clock
 
-## FUNCTIONS ##
-# Function that allows the software to simulate a Lab Streaming Layer streaming output
-def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_size = 360, \
-    stype = "random"):
 
+def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
+                       stype="random"):
     """ 
     Here we create a data stream output so that we can test the rest of the networking
     properties without having a proper output, like the one from Cognionics DAQ software.
@@ -43,13 +41,13 @@ def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_siz
 
     # Here we define some metadata of the stream (Name, type, number of channels,
     # frequency, data type and serial number/unique identifier).
-    stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, frequency,\
-        "float32", "myuid000000")
+    stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, frequency,
+                             "float32", "myuid000000")
 
     # Attach some extra meta-data (accordance with XDF format)
     channels_handle = stream_info.desc().append_child("channels")
-    channels_labels = ["P8", "P7", "Pz", "P4", "P3", "O1", "O2", "A2",\
-         "ACC8", "ACC9", "ACC10", "Packet Counter", "TRIGGER"]
+    channels_labels = ["P8", "P7", "Pz", "P4", "P3", "O1", "O2", "A2",
+                       "ACC8", "ACC9", "ACC10", "Packet Counter", "TRIGGER"]
     for label in channels_labels:
         ch = channels_handle.append_child("channel")
         ch.append_child_value("label", label)
@@ -59,13 +57,13 @@ def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_siz
 
     # Here we create an outlet with our information, sending information in chunks of
     # 1 sample and the outgoing buffer size being 360 seconds (max.)
-    chunk_size = 1
-    buffer_size = 20
+    chunk_size = 512
+    buffer_size = 360
     outlet = StreamOutlet(stream_info, chunk_size, buffer_size)
 
     # Now here we create the samples and push them to the network
     print("Now sending data...")
-    t0, step = local_clock(), 0 # Used for the stamps and the sample signals
+    t0, step = local_clock(), 0  # Used for the stamps and the sample signals
     interval = 1 / frequency
     while True:
         # Get the timestamp with t0 as a reference for initial time
@@ -75,24 +73,24 @@ def virtual_cognionics(channels = 8, frequency = 500, chunk_size = 1, buffer_siz
         if stype == "random":
             sample = list(np.random.rand(channels + 5))
 
-        elif stype == "sinusoid": # Frequency of 10 Hz
+        elif stype == "sinusoid":  # Frequency of 10 Hz
             sample = [np.sin(10 * 2 * np.pi * step)] * (channels + 5)
 
-        elif stype == "noisy_sin": # Frequencies of 5 and 15 Hz
-            sample = [np.sin(5 * 2 * np.pi * step) + 0.2 * \
-                np.sin(15 * 2 * np.pi * step) + 0.2 * np.random.rand()] * \
+        elif stype == "noisy_sin":  # Frequencies of 5 and 15 Hz
+            sample = [np.sin(5 * 2 * np.pi * step) + 0.2 *
+                      np.sin(15 * 2 * np.pi * step) + 0.2 * np.random.rand()] * \
                 (channels + 5)
         else:
             raise TypeError("Wrong signal type. Please check documentation")
-            
+
         # Update the step
         step += interval
 
         # Now we send it and wait to send the next one
         outlet.push_sample(sample, stamp)
         time.sleep(interval)
-    
-# Function that does a FFT
+
+
 def process_rfft(time, signal):
     """ This function calculates the real fast Fourier transform of a given signal
     and exports the frequency and the signal as obtained in magnitude and in dB, all
