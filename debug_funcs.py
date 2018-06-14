@@ -32,11 +32,15 @@ def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
         frequency: The amount of samples sent per second
         chunk_size: If the samples are going to be sent in chunks of data, then change this
             number to how many samples per chunk
-        buffer_size: The size of the buffer (in seconds) that will hold the data
+        buffer_size: The size of the buffer (in x100 samples) that will hold the data
         stype: "random", "sinusoid" or "noisy_sin" to choose which type of data will be 
             sent (random is the default)
 
     OUTPUT: There's no output.
+
+    IMPORTANT NOTE: When retrieving information from this stream remember that the data is pushed
+    just when there is a client, so there is no data immediately after a client connects, which will
+    in some cases, return an empty tuple if the client collects just after connecting.
     """
 
     # Here we define some metadata of the stream (Name, type, number of channels,
@@ -57,8 +61,6 @@ def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
 
     # Here we create an outlet with our information, sending information in chunks of
     # 1 sample and the outgoing buffer size being 360 seconds (max.)
-    chunk_size = 512
-    buffer_size = 360
     outlet = StreamOutlet(stream_info, chunk_size, buffer_size)
 
     # Now here we create the samples and push them to the network
@@ -66,28 +68,33 @@ def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
     t0, step = local_clock(), 0  # Used for the stamps and the sample signals
     interval = 1 / frequency
     while True:
-        # Get the timestamp with t0 as a reference for initial time
-        stamp = local_clock() - t0
+        # Only work if client connected
+        if outlet.have_consumers():
+            # Get the timestamp with t0 as a reference for initial time
+            stamp = local_clock() - t0
 
-        # Here we create the sample with random data
-        if stype == "random":
-            sample = list(np.random.rand(channels + 5))
+            # Here we create the sample with random data
+            if stype == "random":
+                sample = list(np.random.rand(channels + 5))
 
-        elif stype == "sinusoid":  # Frequency of 10 Hz
-            sample = [np.sin(10 * 2 * np.pi * step)] * (channels + 5)
+            elif stype == "sinusoid":  # Frequency of 10 Hz
+                sample = [np.sin(10 * 2 * np.pi * step)] * (channels + 5)
 
-        elif stype == "noisy_sin":  # Frequencies of 5 and 15 Hz
-            sample = [np.sin(5 * 2 * np.pi * step) + 0.2 *
-                      np.sin(15 * 2 * np.pi * step) + 0.2 * np.random.rand()] * \
-                (channels + 5)
-        else:
-            raise TypeError("Wrong signal type. Please check documentation")
+            elif stype == "noisy_sin":  # Frequencies of 5 and 15 Hz
+                sample = [np.sin(5 * 2 * np.pi * step) + 0.2 *
+                          np.sin(15 * 2 * np.pi * step) + 0.2 * np.random.rand()] * \
+                    (channels + 5)
+            else:
+                raise TypeError(
+                    "Wrong signal type. Please check documentation")
 
-        # Update the step
-        step += interval
+            # Update the step
+            step += interval
 
-        # Now we send it and wait to send the next one
-        outlet.push_sample(sample, stamp)
+            # Send
+            outlet.push_sample(sample, stamp)
+
+        # Wait for next cycle
         time.sleep(interval)
 
 
@@ -115,3 +122,11 @@ def process_rfft(time, signal):
     dBsignal = 20 * sp.log10(fsignal)
 
     return [freq, fsignal, dBsignal]
+
+
+def identity(time, signal):
+    return time, signal
+
+
+if __name__ == "__main__":
+    virtual_cognionics(stype="noisy_sin")
