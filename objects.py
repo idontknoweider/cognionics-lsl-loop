@@ -1,6 +1,8 @@
 # General imports
 import numpy as np
 import scipy as sp
+import glob
+from win32api import GetSystemMetrics
 
 # Plotting imports
 import pyqtgraph as pg
@@ -8,6 +10,9 @@ from pyqtgraph.Qt import QtCore, QtGui
 
 # Networking imports
 from pylsl import StreamInlet, resolve_stream, local_clock
+
+# Visual imports
+from psychopy import visual, core, clock
 
 
 class stimuli(object):
@@ -36,6 +41,10 @@ class stimuli(object):
         for i in range(len(self.stimuli)):
             self.stimuli[i].draw()
 
+    def draw_int(self, imin, imax):
+        for i in range(len(self.stimuli[imin:imax])):
+            self.stimuli[imin+i].draw()
+
     # See which stimuli are contained
     def see(self):
         print("Labels (in order): {0}".format(self.labels))
@@ -43,10 +52,8 @@ class stimuli(object):
     # Swap the place of two stimuli, since the drawing is done from first to last
 
     def swap(self, pos1, pos2):
-        self.stimuli[pos1-1], self.stimuli[pos2 -
-                                           1] = self.stimuli[pos2-1], self.stimuli[pos1-1]
-        self.labels[pos1-1], self.labels[pos2 -
-                                         1] = self.labels[pos2-1], self.labels[pos1-1]
+        self.stimuli[pos1], self.stimuli[pos2] = self.stimuli[pos2], self.stimuli[pos1]
+        self.labels[pos1], self.labels[pos2] = self.labels[pos2], self.labels[pos1]
 
 
 class lsl_stream(object):
@@ -148,3 +155,113 @@ class pseudo_buffer(object):
 
     def flag(self, size):
         return len(self.buffer) == size
+
+    def clear(self):
+        self.buffer = []
+
+
+class emoji_stimulus(object):
+    """ This object is created to handle every aspect of the visual representation
+    of the emoji speller stimulus. It is created to simplify its use in other scripts
+    making the readability skyrocket (due to reasons like: not having 200 lines on a
+    main script) 
+
+    Methods:
+        __init__(self, **kwargs): Initialises the window and the emoji images and places
+            everything where it is supposed to go. Also initialises the augmentation (blue
+            rectangle). Accepts scalings (window_scaling, motion_scaling, stimulus_scaling)
+            as keyword arguments to change the relative size of those parameters with respect
+            to the screen size.
+        quit(self): Closes the PsychoPy's window and quits the PsychoPy's core
+
+
+    Attributes:
+        self.window: The window object of PsychoPy
+        self.stimuli: The stimuli object (class defined in this file) 
+            containing all the stimuli from PsychoPy.
+        self.num_emojis: Number of emoji images found
+        self.imXaxis: Yeah, that. 
+
+
+
+    """
+
+    def __init__(self, **kwargs):
+        # Get monitor dimensions directly from system and define window
+        monitor_dims = np.array([GetSystemMetrics(0),
+                                 GetSystemMetrics(1)])  # Monitor dimensions (px)
+        refresh_rate = 60                               # Monitor refresh rate in Hz
+        print(monitor_dims)
+        # Number of frames per ms
+        min_refresh = ((1000/refresh_rate)/100)
+        print("Min refresh rate: {0} ms".format(min_refresh))
+
+        if "window_scaling" in kwargs:
+            window_scaling = kwargs["window_scaling"]
+        else:
+            window_scaling = 0.8
+
+        # Stimuli window dimensions (px)
+        window_dims = window_scaling * monitor_dims
+
+        # Distance of Stimulus square movement, rounded for draw() method
+        if "motion_scaling" in kwargs:
+            motion_scaling = kwargs["motion_scaling"]
+        else:
+            motion_scaling = 0.19
+
+        motion_dim = np.round(window_dims[0] * motion_scaling)
+        print("Motion dim: {0}".format(motion_dim))
+
+        if "stimulus_scaling" in kwargs:
+            stimulus_scaling = kwargs["stimulus_scaling"]
+        else:
+            stimulus_scaling = 0.19
+
+        # Dimensions of the stimuli
+        stimulus_dim = np.round(window_dims[0] * stimulus_scaling)
+        print("Stimulus dim: {0}". format(stimulus_dim))
+
+        # Create window
+        self.window = visual.Window(
+            window_dims, monitor="testMonitor", units="deg")
+
+        ## Stimuli parameters ##
+        # Stimuli holder
+        self.stimuli = stimuli()
+
+        # Emoticon images
+        # Get a list with the path to the emoticon image files
+        emoji_path_list = glob.glob("1D Scale-Swaney-Stueve\\*.png")
+        num_emojis = len(emoji_path_list)
+        self.num_emojis = num_emojis
+        emoji_size = stimulus_dim/2
+
+        # Iterate over them to create the stimuli and the labels corresponding to the filename
+        for i in range(len(emoji_path_list)):
+            # Unpack the path string to get just filename without file format
+            label = emoji_path_list[i].split("\\")[1].split(".")[0]
+
+            # Create the stimuli
+            self.stimuli.add(visual.ImageStim(
+                win=self.window, image=emoji_path_list[i], units="pix", size=emoji_size), label)
+
+        # Order the negative emojis correctly
+        self.stimuli.swap(0, 2)
+
+        # Blue Augmentation Square Stim Parameters
+        self.stimuli.add(visual.Rect(win=self.window, units="pix", width=emoji_size,
+                                     height=emoji_size, fillColor=[-1, -1, 1], lineColor=[0, 0, 0]), "rectBlue")
+
+        ## Positioning ##
+        # Position across x-axis
+        emoji_pos = window_dims[0] * 0.8
+        imXaxis = np.linspace(0 - emoji_pos/2, 0 + emoji_pos/2, num_emojis)
+        self.imXaxis = imXaxis
+
+        for i in range(num_emojis):
+            self.stimuli.stimuli[i].pos = (imXaxis[i], 0)
+
+    def quit(self):
+        self.window.close()
+        core.quit()
