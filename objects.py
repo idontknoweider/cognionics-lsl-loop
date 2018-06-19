@@ -40,9 +40,9 @@ class stimuli(object):
     def see(self):
         print("Labels (in order): {0}".format(self.labels))
 
-    # Exchange the place of two stimuli, since the drawing is done from first to last
+    # Swap the place of two stimuli, since the drawing is done from first to last
 
-    def exchange(self, pos1, pos2):
+    def swap(self, pos1, pos2):
         self.stimuli[pos1-1], self.stimuli[pos2 -
                                            1] = self.stimuli[pos2-1], self.stimuli[pos1-1]
         self.labels[pos1-1], self.labels[pos2 -
