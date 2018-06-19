@@ -37,6 +37,10 @@ class stimuli(object):
     def see(self):
         print(self.stimuli)
 
+    # Exchange the place of two stimuli, since the drawing is done from first to last
+    def exchange(self, pos1, pos2):
+        self.stimuli[pos1-1], self.stimuli[pos2-1] = self.stimuli[pos2-1], self.stimuli[pos1-1]
+
 
 class lsl_stream(object):
     """
@@ -119,6 +123,12 @@ class pseudo_buffer(object):
     def __init__(self):
         self.buffer = []
 
+    def extend(self, new):
+        self.buffer.extend(new)
+
+    def append(self, new):
+        self.buffer.append(new)
+
     def take_old(self, ammount):
         return_ = self.buffer[:ammount]
         self.buffer = self.buffer[ammount:]
@@ -128,3 +138,6 @@ class pseudo_buffer(object):
         return_ = self.buffer[ammount:]
         self.buffer = self.buffer[:ammount]
         return return_
+
+    def flag(self, size):
+        return len(self.buffer) == size
