@@ -20,13 +20,16 @@ class stimuli(object):
     # When the object initializes, it creates an empty list to contain stimuli
     def __init__(self):
         self.stimuli = []
+        self.labels = []
 
     # Method to add stimuli
-    def add(self, stimulus):
+    def add(self, stimulus, label):
         if type(stimulus) == type([]):
             self.stimuli.extend(stimulus)
+            self.labels.extend(label)
         else:
             self.stimuli.append(stimulus)
+            self.labels.append(label)
 
     # Method to update all stimuli "simultaneously"
     def draw(self):
@@ -35,11 +38,15 @@ class stimuli(object):
 
     # See which stimuli are contained
     def see(self):
-        print(self.stimuli)
+        print("Labels (in order): {0}".format(self.labels))
 
     # Exchange the place of two stimuli, since the drawing is done from first to last
+
     def exchange(self, pos1, pos2):
-        self.stimuli[pos1-1], self.stimuli[pos2-1] = self.stimuli[pos2-1], self.stimuli[pos1-1]
+        self.stimuli[pos1-1], self.stimuli[pos2 -
+                                           1] = self.stimuli[pos2-1], self.stimuli[pos1-1]
+        self.labels[pos1-1], self.labels[pos2 -
+                                         1] = self.labels[pos2-1], self.labels[pos1-1]
 
 
 class lsl_stream(object):
