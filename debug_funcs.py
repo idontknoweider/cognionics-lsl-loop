@@ -7,12 +7,13 @@ import scipy as sp
 import scipy.fftpack as fft
 import random as rand
 import time
+import sys
 
 # Networking imports
 from pylsl import StreamInfo, StreamOutlet, local_clock
 
 
-def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
+def virtual_cognionics(channels=8, srate=500, chunk_size=1, buffer_size=360,
                        stype="random"):
     """ 
     Here we create a data stream output so that we can test the rest of the networking
@@ -29,7 +30,7 @@ def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
 
     INPUT:
         channels: The number of sensor that the supposed Cognionics EEG would have working
-        frequency: The amount of samples sent per second
+        srate: The amount of samples sent per second
         chunk_size: If the samples are going to be sent in chunks of data, then change this
             number to how many samples per chunk
         buffer_size: The size of the buffer (in x100 samples) that will hold the data
@@ -44,8 +45,8 @@ def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
     """
 
     # Here we define some metadata of the stream (Name, type, number of channels,
-    # frequency, data type and serial number/unique identifier).
-    stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, frequency,
+    # sample rate, data type and serial number/unique identifier).
+    stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, srate,
                              "float32", "myuid000000")
 
     # Attach some extra meta-data (accordance with XDF format)
@@ -66,7 +67,7 @@ def virtual_cognionics(channels=8, frequency=500, chunk_size=1, buffer_size=360,
     # Now here we create the samples and push them to the network
     print("Now sending data...")
     t0, step = local_clock(), 0  # Used for the stamps and the sample signals
-    interval = 1 / frequency
+    interval = 1 / srate
     while True:
         # Only work if client connected
         if outlet.have_consumers():
@@ -123,10 +124,5 @@ def process_rfft(time, signal):
 
     return [freq, fsignal, dBsignal]
 
-
-def identity(time, signal):
-    return time, signal
-
-
 if __name__ == "__main__":
-    virtual_cognionics(stype="noisy_sin")
+    virtual_cognionics(stype=sys.argv[1], srate=float(sys.argv[2]))
