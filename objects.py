@@ -192,17 +192,18 @@ class emoji_stimulus(object):
 
     def __init__(self, **kwargs):
         # Get monitor dimensions directly from system and define window
-        try:
+        try:    # For those cases in which user is not using Windows
             monitor_dims = np.array([GetSystemMetrics(0),
-                                    GetSystemMetrics(1)])  # Monitor dimensions (px)
+                                     GetSystemMetrics(1)])  # Monitor dimensions (px)
         except:
             monitor_dims = np.array([1920, 1080])
-        
+
         refresh_rate = 60                               # Monitor refresh rate in Hz
-        print(monitor_dims)
+        # print("Monitor dimensions: {0}".format(monitor_dims))
+
         # Number of frames per ms
         min_refresh = ((1000/refresh_rate)/100)
-        print("Min refresh rate: {0} ms".format(min_refresh))
+        # print("Min refresh rate: {0} ms".format(min_refresh))
 
         if "window_scaling" in kwargs:
             window_scaling = kwargs["window_scaling"]
@@ -219,7 +220,7 @@ class emoji_stimulus(object):
             motion_scaling = 0.19
 
         motion_dim = np.round(window_dims[0] * motion_scaling)
-        print("Motion dim: {0}".format(motion_dim))
+        # print("Motion dim: {0}".format(motion_dim))
 
         if "stimulus_scaling" in kwargs:
             stimulus_scaling = kwargs["stimulus_scaling"]
@@ -228,7 +229,7 @@ class emoji_stimulus(object):
 
         # Dimensions of the stimuli
         stimulus_dim = np.round(window_dims[0] * stimulus_scaling)
-        print("Stimulus dim: {0}". format(stimulus_dim))
+        # print("Stimulus dim: {0}". format(stimulus_dim))
 
         # Create window
         self.window = visual.Window(
@@ -274,8 +275,8 @@ class emoji_stimulus(object):
         self.window.close()
         core.quit()
 
-    def experiment_setup(self, pres_duration=1, aug_wait=0.5, inter_trial_wait=1,
-                         stim_duration=1, seq_components=5, per_augmentations=0.2):
+    def experiment_setup(self, pres_duration=5, aug_duration=0.125, aug_wait=0,
+                         inter_seq_interval=0.375, seq_number=5):
         """
         Set-up an emoji stimuli experiment.
 
@@ -283,13 +284,55 @@ class emoji_stimulus(object):
 
         Arguments:
             pres_duration: Duration of initial stimuli presentation
-            aug_wait: Temporal distance between P300 visual augmentations
-            inter_trial_wait: Inter trial interval duration
-            stim_duration: Duration of time per square presented
-            seq_components: Total number of target squares presented
+            aug_duration: Duration of the augmentation on screen
+            aug_wait: Temporal distance between augmentations
+            inter_seq_interval: Time between sequences
+            seq_number: Number of sequences
             per_augmentations: Percentage (/100) of augmented squares per block
-        
-        """
 
-        #stim_seq_duration = self.num_emojis * aug_wait  # Duration of one stimulus sequence
-        #aug_times = np.linspace(0, stim_seq_duration)
+        """
+        # Save experiment parameters in object
+        self.pres_dur = pres_duration
+        self.aug_dur = aug_duration
+        self.aug_wait = aug_wait
+        self.iseqi = inter_seq_interval
+        self.num_seq = seq_number
+
+        # Compute the duration of the experiment and get the timing of the events
+        self.sequence_duration = (aug_duration + aug_wait) * self.num_emojis
+        self.augmentation_times = np.linspace(
+            0, self.sequence_duration, self.num_emojis + 1)[:self.num_emojis]
+
+        # Randomisation for augmentations
+        aug_shuffle = np.arange(
+            self.num_emojis * seq_number).reshape(seq_number, self.num_emojis)
+        for i in range(seq_number):
+            aug_shuffle[i, :] = np.arange(0, self.num_emojis, 1)
+            np.random.shuffle(aug_shuffle[i, :])
+        self.aug_shuffle = aug_shuffle
+
+    def play(self):
+        for s in range(self.num_seq):
+            for e in range(self.num_emojis):
+                # Move blue rectangle and draw everything
+                self.stimuli.stimuli[-1].pos = (
+                    self.imXaxis[self.aug_shuffle[s, e]], 0)
+                self.stimuli.draw()
+
+                # Window flip
+                self.window.flip()
+
+                # Wait the aug_dur time
+                clock.wait(self.aug_dur)
+
+                # Draw just the emojis, getting rid of the rectangle
+                self.stimuli.draw_int(0, -1)
+
+                # Window flip
+                self.window.flip()
+
+                # Pause aug_wait time
+                clock.wait(self.aug_wait)
+
+            # Wait the Inter Sequence Interval time
+            clock.wait(self.iseqi)
