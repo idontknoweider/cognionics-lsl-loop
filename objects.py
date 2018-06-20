@@ -2,7 +2,9 @@
 import numpy as np
 import scipy as sp
 import glob
-from win32api import GetSystemMetrics
+import platform
+if platform.architecture()[1][:7] == "Windows":
+    from win32api import GetSystemMetrics
 
 # Plotting imports
 import pyqtgraph as pg
@@ -173,6 +175,8 @@ class emoji_stimulus(object):
             as keyword arguments to change the relative size of those parameters with respect
             to the screen size.
         quit(self): Closes the PsychoPy's window and quits the PsychoPy's core
+        experiment_setup(self, ...): Set-up an experiment with all the neede parameters. Please,
+            refer to that method's documentation to see all the arguments and usage.
 
 
     Attributes:
@@ -188,8 +192,12 @@ class emoji_stimulus(object):
 
     def __init__(self, **kwargs):
         # Get monitor dimensions directly from system and define window
-        monitor_dims = np.array([GetSystemMetrics(0),
-                                 GetSystemMetrics(1)])  # Monitor dimensions (px)
+        try:
+            monitor_dims = np.array([GetSystemMetrics(0),
+                                    GetSystemMetrics(1)])  # Monitor dimensions (px)
+        except:
+            monitor_dims = np.array([1920, 1080])
+        
         refresh_rate = 60                               # Monitor refresh rate in Hz
         print(monitor_dims)
         # Number of frames per ms
@@ -265,3 +273,23 @@ class emoji_stimulus(object):
     def quit(self):
         self.window.close()
         core.quit()
+
+    def experiment_setup(self, pres_duration=1, aug_wait=0.5, inter_trial_wait=1,
+                         stim_duration=1, seq_components=5, per_augmentations=0.2):
+        """
+        Set-up an emoji stimuli experiment.
+
+        All the units are SI units unless specified.
+
+        Arguments:
+            pres_duration: Duration of initial stimuli presentation
+            aug_wait: Temporal distance between P300 visual augmentations
+            inter_trial_wait: Inter trial interval duration
+            stim_duration: Duration of time per square presented
+            seq_components: Total number of target squares presented
+            per_augmentations: Percentage (/100) of augmented squares per block
+        
+        """
+
+        #stim_seq_duration = self.num_emojis * aug_wait  # Duration of one stimulus sequence
+        #aug_times = np.linspace(0, stim_seq_duration)
