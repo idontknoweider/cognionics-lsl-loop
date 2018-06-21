@@ -1,7 +1,9 @@
 # General imports
 import numpy as np
 import scipy as sp
+import time
 import glob
+import os
 import platform
 if platform.architecture()[1][:7] == "Windows":
     from win32api import GetSystemMetrics
@@ -22,30 +24,38 @@ class stimuli(object):
     Class used as a container for the stimuli of the experiment. The advantage
     of using this object mainly comes in the form of using a single draw() method
     to update all of them and being able to see which stimuli the experiment has.
+
+    METHODS:
+        __init__(): Create a list for the items and the labels
+        add(stimulus, label): Add an stimulus to the lists
+
+
+
+
     """
 
     # When the object initializes, it creates an empty list to contain stimuli
     def __init__(self):
-        self.stimuli = []
+        self.items = []
         self.labels = []
 
     # Method to add stimuli
     def add(self, stimulus, label):
         if type(stimulus) == type([]):
-            self.stimuli.extend(stimulus)
+            self.items.extend(stimulus)
             self.labels.extend(label)
         else:
-            self.stimuli.append(stimulus)
+            self.items.append(stimulus)
             self.labels.append(label)
 
     # Method to update all stimuli "simultaneously"
     def draw(self):
-        for i in range(len(self.stimuli)):
-            self.stimuli[i].draw()
+        for i in range(len(self.items)):
+            self.items[i].draw()
 
     def draw_int(self, imin, imax):
-        for i in range(len(self.stimuli[imin:imax])):
-            self.stimuli[imin+i].draw()
+        for i in range(len(self.items[imin:imax])):
+            self.items[imin+i].draw()
 
     # See which stimuli are contained
     def see(self):
@@ -54,7 +64,7 @@ class stimuli(object):
     # Swap the place of two stimuli, since the drawing is done from first to last
 
     def swap(self, pos1, pos2):
-        self.stimuli[pos1], self.stimuli[pos2] = self.stimuli[pos2], self.stimuli[pos1]
+        self.items[pos1], self.items[pos2] = self.items[pos2], self.items[pos1]
         self.labels[pos1], self.labels[pos2] = self.labels[pos2], self.labels[pos1]
 
 
@@ -67,7 +77,9 @@ class lsl_stream(object):
     METHODS:
         __init__: Initiates a connection when the class is called
         connect: Connects to a data stream in the network given defined by the keyword args
-        pull: Pulls a chunk of data from the connected data stream
+        pull: Pulls a sample from the connected data stream
+        chunk: Pulls a chunk of samples from the data stream
+        save: Start the saving procedure
 
     ATTRIBUTES:
         streams: List of found LSL streams in the network
@@ -77,6 +89,7 @@ class lsl_stream(object):
 
     def __init__(self, **stream_info):
         self.connect(**stream_info)
+        self.save_flag = False
 
     def connect(self, **stream_info):
         """
@@ -132,34 +145,143 @@ class lsl_stream(object):
         """
         This method pulls chunks. Uses sames formating as .pull
         """
+        # chunk, timestamp = self.inlet.pull_chunk(**kwargs)
         return self.inlet.pull_chunk(**kwargs)
+
+    def setup_saving(self, **kwargs):
+        """
+        This method opens a file according to a given filename or according
+        to the date of use and sets up a flag so if something starts pulling
+        data from the stream that data is also stored in the file.
+
+        Arguments:
+            filename: Name of the file where the user wants to save the data
+
+        """
+        # Set a flag to True so code knows it has to save
+        self.save_flag = True
+
+        # File name as a .dat file. If none given use default format.
+        if "filename" in kwargs:
+            file_name = kwargs["filename"]
+            if file_name[-4] != ".dat":
+                file_name = file_name + ".dat"
+        else:
+            time_string = time.strftime("%y%m%d_%H%M%S", time.localtime())
+            file_name = "LSL_data_" + time_string + ".dat"
+
+        # Open saving file as write only
+        self.savefile = open(file_name, "w")
+
+    def save(self, data):
+        """
+        This method prepares the data for saving and saves it into the file.
+        The data input into the method should be the data directly obtained
+        from the stream (meaning that it also has the timestamps).
+        """
+        data = np.asarray(data)
 
 
 class pseudo_buffer(object):
+    """
+    This class works like a buffer, or an enhanced list to store data temporally.
+    It also stores the data in files when erasing it so you don't lose it but 
+    you don't lose RAM either.
+
+    METHODS:
+        __init__: Create the buffer
+        extend: Add new continuous data
+        append: Add new nested data
+        take_old: Obtain the oldest part of data and erase it from the buffer
+        take_new: Obtain the newest part of data and erase it from the buffer
+        flag: Return a bool value indicating if the buffer has a certain size
+        clear: Clear the buffer
+        save: Save certain buffer data to a file
+
+
+    ATTRIBUTES:
+        self.items: A list with the data
+    """
+
     def __init__(self):
-        self.buffer = []
+        self.items = []
+        self.save_names = []    # A string with the names of the savefiles
 
     def extend(self, new):
-        self.buffer.extend(new)
+        self.items.extend(new)
 
     def append(self, new):
-        self.buffer.append(new)
+        self.items.append(new)
 
     def take_old(self, ammount):
-        return_ = self.buffer[:ammount]
-        self.buffer = self.buffer[ammount:]
+        self.save(imax=ammount)
+        return_ = self.items[:ammount]
+        self.items = self.items[ammount:]
         return return_
 
     def take_new(self, ammount):
-        return_ = self.buffer[ammount:]
-        self.buffer = self.buffer[:ammount]
+        self.save(imin=ammount)
+        return_ = self.items[ammount:]
+        self.items = self.items[:ammount]
         return return_
 
     def flag(self, size):
-        return len(self.buffer) == size
+        return len(self.items) == size
 
     def clear(self):
-        self.buffer = []
+        self.items = []
+
+    def save(self, **kwargs):
+        """
+        Save part of the buffer to a .npy file 
+
+        Arguments:
+            imin (kwarg): First index of slice (arrays start with index 0)
+            imax (kwarg): Last index of slice (last item will be item imax-1)
+            filename (kwarg): Name of the file. Default is buffered_<date and time>
+        """
+
+        if "filename" in kwargs:
+            file_name = kwargs["filename"]
+        else:
+            time_string = time.strftime("%y%m%d_%H%M%S", time.localtime())
+            file_name = "buffered_" + time_string
+
+        # Save the name to the list of names
+        self.save_names.append(file_name)
+
+        # Save data to file_name.npy file
+        if "imin" in kwargs and "imax" in kwargs:
+            imin = kwargs["imin"]
+            imax = kwargs["imax"]
+            np.save(file_name, self.items[imin:imax])
+        elif "imin" in kwargs:
+            imin = kwargs["imin"]
+            np.save(file_name, self.items[imin:])
+        elif "imax" in kwargs:
+            imax = kwargs["imax"]
+            np.save(file_name, self.items[:imax])
+        else:
+            np.save(file_name, self.items)
+
+    def zip(self, compress=False):
+        """
+        Takes all the saved .npy files and turns them into a
+        zipped (and compressed if compress = True) .npz file.
+
+        Arguments:
+            compress: True if want to use compressed version of
+                zipped file.
+        """
+        arrays = []
+        for name in self.save_names:
+            arrays.append(np.load(name + ".npy"))
+            os.remove(name + ".npy")
+
+        if compress == False:
+            np.savez(self.save_names[0], *arrays)
+        else:
+            np.savez_compressed(self.save_names[0], *arrays)
 
 
 class emoji_stimulus(object):
@@ -168,26 +290,32 @@ class emoji_stimulus(object):
     making the readability skyrocket (due to reasons like: not having 200 lines on a
     main script) 
 
-    Methods:
-        __init__(self, **kwargs): Initialises the window and the emoji images and places
-            everything where it is supposed to go. Also initialises the augmentation (blue
-            rectangle). Accepts scalings (window_scaling, motion_scaling, stimulus_scaling)
-            as keyword arguments to change the relative size of those parameters with respect
-            to the screen size.
-        quit(self): Closes the PsychoPy's window and quits the PsychoPy's core
-        experiment_setup(self, ...): Set-up an experiment with all the neede parameters. Please,
+    METHODS:
+        __init__: Initialises the window and the emoji images and places everything where
+            it is supposed to go. Also initialises the augmentation (blue rectangle). 
+            Accepts scalings (window_scaling, motion_scaling, stimulus_scaling) as keyword
+            arguments to change the relative size of those parameters with respect to the 
+            screen size.
+        quit: Closes the PsychoPy's window and quits the PsychoPy's core
+        experiment_setup: Set-up an experiment with all the neede parameters. Please,
             refer to that method's documentation to see all the arguments and usage.
+        play: Play the estimuli as set up.
 
 
-    Attributes:
+    ATTRIBUTES:
         self.window: The window object of PsychoPy
         self.stimuli: The stimuli object (class defined in this file) 
             containing all the stimuli from PsychoPy.
         self.num_emojis: Number of emoji images found
-        self.imXaxis: Yeah, that. 
-
-
-
+        self.imXaxis: Positions of the emojis along the X axis.
+        self.pres_dur: Duration of initial presentation of stimuli
+        self.aug_dur: Duration of the augmentations
+        self.aug_wait: Time between augmentations
+        self.iseqi: Inter Sequence Interval duration
+        self.num_seq: Number of sequences per trial
+        self.sequence_duration: Time duration of each sequence
+        self.aug_shuffle: Shuffled list indicating which emoji is going 
+            to augment in each sequence.
     """
 
     def __init__(self, **kwargs):
@@ -203,7 +331,7 @@ class emoji_stimulus(object):
 
         # Number of frames per ms
         min_refresh = ((1000/refresh_rate)/100)
-        # print("Min refresh rate: {0} ms".format(min_refresh))
+        print("Min refresh rate: {0} ms".format(min_refresh))
 
         if "window_scaling" in kwargs:
             window_scaling = kwargs["window_scaling"]
@@ -220,7 +348,7 @@ class emoji_stimulus(object):
             motion_scaling = 0.19
 
         motion_dim = np.round(window_dims[0] * motion_scaling)
-        # print("Motion dim: {0}".format(motion_dim))
+        print("Motion dim: {0}".format(motion_dim))
 
         if "stimulus_scaling" in kwargs:
             stimulus_scaling = kwargs["stimulus_scaling"]
@@ -269,7 +397,7 @@ class emoji_stimulus(object):
         self.imXaxis = imXaxis
 
         for i in range(num_emojis):
-            self.stimuli.stimuli[i].pos = (imXaxis[i], 0)
+            self.stimuli.items[i].pos = (imXaxis[i], 0)
 
     def quit(self):
         self.window.close()
@@ -300,8 +428,8 @@ class emoji_stimulus(object):
 
         # Compute the duration of the experiment and get the timing of the events
         self.sequence_duration = (aug_duration + aug_wait) * self.num_emojis
-        self.augmentation_times = np.linspace(
-            0, self.sequence_duration, self.num_emojis + 1)[:self.num_emojis]
+        """ augmentation_times = np.linspace(
+            0, self.sequence_duration, self.num_emojis + 1)[:self.num_emojis] """
 
         # Randomisation for augmentations
         aug_shuffle = np.arange(
@@ -315,7 +443,7 @@ class emoji_stimulus(object):
         for s in range(self.num_seq):
             for e in range(self.num_emojis):
                 # Move blue rectangle and draw everything
-                self.stimuli.stimuli[-1].pos = (
+                self.stimuli.items[-1].pos = (
                     self.imXaxis[self.aug_shuffle[s, e]], 0)
                 self.stimuli.draw()
 
@@ -336,3 +464,4 @@ class emoji_stimulus(object):
 
             # Wait the Inter Sequence Interval time
             clock.wait(self.iseqi)
+            
