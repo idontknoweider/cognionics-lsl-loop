@@ -1,12 +1,10 @@
 # General imports
 import numpy as np
 import scipy as sp
-import time
-import glob
-import os
-import platform
+import time, glob, os, platform
 if platform.architecture()[1][:7] == "Windows":
     from win32api import GetSystemMetrics
+from datetime import datetime
 
 # Plotting imports
 import pyqtgraph as pg
@@ -27,11 +25,15 @@ class stimuli(object):
 
     METHODS:
         __init__(): Create a list for the items and the labels
-        add(stimulus, label): Add an stimulus to the lists
+        add(stimulus, label): Add an stimulus to the lists with given label
+        draw(): Draw all the stimuli on a opened PsychoPy window
+        draw_int(imin, imax): Draw SOME stimuli (in the slice of imin:imax)
+        see(): Check labels
+        swap(pos1, pos2): Swap to stimuli and their labels
 
-
-
-
+    ATTRIBUTES:
+        self.items: Contains the stimuli
+        self.labels: Contains stimuli's labels
     """
 
     # When the object initializes, it creates an empty list to contain stimuli
@@ -75,11 +77,11 @@ class lsl_stream(object):
     information directly is made trivial.
 
     METHODS:
-        __init__: Initiates a connection when the class is called
-        connect: Connects to a data stream in the network given defined by the keyword args
-        pull: Pulls a sample from the connected data stream
-        chunk: Pulls a chunk of samples from the data stream
-        save: Start the saving procedure
+        __init__(**stream_info): Initiates a connection when the class is called
+        connect(**stream_info): Connects to a data stream in the network given 
+                defined by the keyword args
+        pull(**kwargs): Pulls a sample from the connected data stream
+        chunk(**kwargs): Pulls a chunk of samples from the data stream
 
     ATTRIBUTES:
         streams: List of found LSL streams in the network
@@ -173,16 +175,8 @@ class lsl_stream(object):
         # Open saving file as write only
         self.savefile = open(file_name, "w")
 
-    def save(self, data):
-        """
-        This method prepares the data for saving and saves it into the file.
-        The data input into the method should be the data directly obtained
-        from the stream (meaning that it also has the timestamps).
-        """
-        data = np.asarray(data)
 
-
-class pseudo_buffer(object):
+class lsl_buffer(object):
     """
     This class works like a buffer, or an enhanced list to store data temporally.
     It also stores the data in files when erasing it so you don't lose it but 
@@ -190,28 +184,31 @@ class pseudo_buffer(object):
 
     METHODS:
         __init__: Create the buffer
-        extend: Add new continuous data
-        append: Add new nested data
+        add: Add data from LSL stream (formatted as such)
         take_old: Obtain the oldest part of data and erase it from the buffer
         take_new: Obtain the newest part of data and erase it from the buffer
         flag: Return a bool value indicating if the buffer has a certain size
         clear: Clear the buffer
         save: Save certain buffer data to a file
+        zip: Take all the files saved and put them into a single .npz file
 
 
     ATTRIBUTES:
-        self.items: A list with the data
+        self.items: A list with the data and the timestamps as the last column
+        self.save_names: A list with the names of the files used for saving
     """
 
     def __init__(self):
         self.items = []
         self.save_names = []    # A string with the names of the savefiles
 
-    def extend(self, new):
-        self.items.extend(new)
+    def add(self, new):
+        data = new[0]
+        stamps = new[1]
+        for i in range(len(data)): # Runs over all the moments (time points)
+            data[i].append(stamps[i])
 
-    def append(self, new):
-        self.items.append(new)
+        self.items.extend(data)
 
     def take_old(self, ammount):
         self.save(imax=ammount)
@@ -228,8 +225,10 @@ class pseudo_buffer(object):
     def flag(self, size):
         return len(self.items) == size
 
-    def clear(self):
+    def clear(self, names=False):
         self.items = []
+        if names == True:
+            self.save_names = []
 
     def save(self, **kwargs):
         """
@@ -244,7 +243,7 @@ class pseudo_buffer(object):
         if "filename" in kwargs:
             file_name = kwargs["filename"]
         else:
-            time_string = time.strftime("%y%m%d_%H%M%S", time.localtime())
+            time_string = datetime.now().strftime("%y%m%d_%H%M%S%f")
             file_name = "buffered_" + time_string
 
         # Save the name to the list of names
@@ -464,4 +463,3 @@ class emoji_stimulus(object):
 
             # Wait the Inter Sequence Interval time
             clock.wait(self.iseqi)
-            
