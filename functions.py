@@ -1,6 +1,7 @@
 # System import
 import sys
 
+
 def dict_bash_kwargs():
     """
     This function returns a dictionary containing the keyword arguments given in bash as 
