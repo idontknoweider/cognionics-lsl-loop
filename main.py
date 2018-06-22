@@ -19,16 +19,10 @@ from functions import dict_bash_kwargs, identity
 
 ## Main ##
 if __name__ == "__main__":
-    # If extra arguments have been written when calling the script
-    args = dict_bash_kwargs()
-
-    # Window size for processing (in seconds)
-    if "window_size" in args:
-        sampling_window_size = args["window_size"]
-    else:
-        sampling_window_size = 500  # Supposing 500 Hz srate
-
+    ## CONNECTION TO STREAM ##
+    print("-- STREAM CONNECTION --")
     # Connect to the stream and create the stream handle
+    print("Connecting to data stream...")
     data_stream = lsl_stream(type="EEG")
 
     # Get the number of channels from the inlet to use later
@@ -37,24 +31,43 @@ if __name__ == "__main__":
 
     # Get the nominal sampling rate (rate at which the server sends information)
     srate = data_stream.inlet.info().nominal_srate()
-    print("The sampling rate is: {0}".format(srate))
+    print("The sampling rate is: {0} \n".format(srate))
 
+    ## STIMULUS INITIALISATION ##
+    print("-- STIMULUS SETUP -- ")
     # Initialise the stimulus
     estimulus = emoji_stimulus()
     estimulus.experiment_setup()
 
+    # Print the shuffling sequence
     print("Emoji stimuli shuffling sequence:")
     print(estimulus.aug_shuffle)
 
+    # Print some useful values
+    print("Duration of each sequence: {0}".format(estimulus.sequence_duration))
+    ammount = int(np.ceil(estimulus.sequence_duration * srate))
+    print("Ammount of samples per sequence: {0}".format(ammount))
+
+    ## CREATE THE BUFFER ##
     # Create a buffer to hold the samples
     buffer = lsl_buffer()
 
-    # Start the experiment
+    ## VIRTUAL COGNIONICS EXCEPTION ##
     # For virtual_cognionics notify the stream
-    _ = data_stream.chunk()
-    ammount = int(np.floor(estimulus.sequence_duration * srate))
-
-    pp.clock.wait(1)
+    if data_stream.inlet.info().name() == "Virtual Cognionics Quick-20":
+        print("Stream is Virtual Cognionics Quick-20")
+        start = data_stream.chunk()
+        wait_text = pp.visual.TextStim(win=estimulus.window, pos = [0, 0],
+                            text="Wait please...")
+        wait_text.draw()
+        estimulus.window.flip()
+        pp.clock.wait(2)
+        pretty = data_stream.chunk(max_samples=2)
+        please = data_stream.chunk(max_samples=2)
+        print("Is {0} this {1} working {2}?".format(np.shape(start), np.shape(pretty), np.shape(please)))
+    
+    ## START THE EXPERIMENT ## 
+    print("-- EXPERIMENT STARTING --")   
     # Tell the stream to start
     for s in range(estimulus.num_seq):
         for e in range(estimulus.num_emojis):
@@ -83,11 +96,20 @@ if __name__ == "__main__":
 
         # Save just the last part of the data (the one that has to belong to the trial)
         data = np.asarray(buffer.take_new(ammount))
-        print(np.shape(data))
-        #_, flag = identity(data[:,-1], data[:,:-1])
+        print("The shape of the data array {0}: {1}".format(s + 1, np.shape(data)))
+
+        # Here we would have the part where the sequence is processed to find the choice
+        choice = 4
 
         # Wait the Inter Sequence Interval time
         pp.clock.wait(estimulus.iseqi)
 
+    # Here we would cramp al the single choices into a final one
+    final_choice = choice
+
+    # Confirm the choice
+    estimulus.confirm(final_choice)
+
+    # Close everything
     buffer.zip()
     estimulus.quit()
