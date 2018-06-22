@@ -57,17 +57,18 @@ if __name__ == "__main__":
     if data_stream.inlet.info().name() == "Virtual Cognionics Quick-20":
         print("Stream is Virtual Cognionics Quick-20")
         start = data_stream.chunk()
-        wait_text = pp.visual.TextStim(win=estimulus.window, pos = [0, 0],
-                            text="Wait please...")
+        wait_text = pp.visual.TextStim(win=estimulus.window, pos=[0, 0],
+                                       text="Wait please...")
         wait_text.draw()
         estimulus.window.flip()
         pp.clock.wait(2)
         pretty = data_stream.chunk(max_samples=2)
         please = data_stream.chunk(max_samples=2)
-        print("Is {0} this {1} working {2}?".format(np.shape(start), np.shape(pretty), np.shape(please)))
-    
-    ## START THE EXPERIMENT ## 
-    print("-- EXPERIMENT STARTING --")   
+        print("Is {0} this {1} working {2}?".format(
+            np.shape(start), np.shape(pretty), np.shape(please)))
+
+    ## START THE EXPERIMENT ##
+    print("-- EXPERIMENT STARTING --")
     # Tell the stream to start
     for s in range(estimulus.num_seq):
         for e in range(estimulus.num_emojis):
@@ -96,7 +97,8 @@ if __name__ == "__main__":
 
         # Save just the last part of the data (the one that has to belong to the trial)
         data = np.asarray(buffer.take_new(ammount))
-        print("The shape of the data array {0}: {1}".format(s + 1, np.shape(data)))
+        print("The shape of the data array {0}: {1}".format(
+            s + 1, np.shape(data)))
 
         # Here we would have the part where the sequence is processed to find the choice
         choice = 4
