@@ -42,8 +42,10 @@ def virtual_cognionics(channels=8, srate=500, chunk_size=1, buffer_size=360,
     IMPORTANT NOTE: When retrieving information from this stream remember that the data is pushed
     just when there is a client, so there is no data immediately after a client connects, which will
     in some cases, return an empty tuple if the client collects just after connecting.
-    """
 
+    SECOND IMPORTANT NOTE: time.sleep() can only do so much. Apparently for periods below 0.002s (roughly
+    500 Hz) the function starts behaving very wrong.
+    """
     # Here we define some metadata of the stream (Name, type, number of channels,
     # sample rate, data type and serial number/unique identifier).
     stream_info = StreamInfo("Virtual Cognionics Quick-20", "EEG", channels + 5, srate,
