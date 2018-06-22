@@ -396,7 +396,8 @@ class emoji_stimulus(object):
         ## Positioning ##
         # Position across x-axis
         emoji_pos = window_dims[0] * 0.8
-        self.imXaxis = np.linspace(0 - emoji_pos/2, 0 + emoji_pos/2, num_emojis)
+        self.imXaxis = np.linspace(
+            0 - emoji_pos/2, 0 + emoji_pos/2, num_emojis)
 
         for i in range(num_emojis):
             self.stimuli.items[i].pos = (self.imXaxis[i], 0)
@@ -466,12 +467,12 @@ class emoji_stimulus(object):
 
             # Wait the Inter Sequence Interval time
             clock.wait(self.iseqi)
-    
-    def confirm(self, rel_position, transform = False):
+
+    def confirm(self, rel_position, transform=False):
         # Highlight the chosen emoji
         index = rel_position-1
-        green_rect = visual.Rect(win=self.window, units="pix", width = self.emoji_size,
-                                height = self.emoji_size, fillColor = [-1, 1, -1], lineColor=[0,0,0])
+        green_rect = visual.Rect(win=self.window, units="pix", width=self.emoji_size,
+                                 height=self.emoji_size, fillColor=[-1, 1, -1], lineColor=[0, 0, 0])
         green_rect.pos = (self.imXaxis[index], 0)
         green_rect.draw()
 
@@ -480,15 +481,15 @@ class emoji_stimulus(object):
             for i in range(self.num_emojis):
                 self.stimuli.items[index].pos = (self.imXaxis[i], 0)
                 self.stimuli.items[index].draw()
-        else: # Or just draw all emojis again
+        else:  # Or just draw all emojis again
             for i in range(self.num_emojis):
                 self.stimuli.items[i].draw()
 
         # Explain the key use
-        text = visual.TextStim(win=self.window, pos = [0, -5],
-                                text="Left = Accept. Right = Deny.")
+        text = visual.TextStim(win=self.window, pos=[0, -5],
+                               text="Left = Accept. Right = Deny.")
         text.draw()
-        
+
         # Refresh the window
         self.window.flip()
 
@@ -503,6 +504,6 @@ class emoji_stimulus(object):
                     response = False
 
         # Print and return the response
-        print("The user said that the selection of emoji {0} is {1}".format(rel_position, response))
-        return response   
-                
+        print("The user said that the selection of emoji {0} is {1}".format(
+            rel_position, response))
+        return response
