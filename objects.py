@@ -1,7 +1,10 @@
 # General imports
 import numpy as np
 import scipy as sp
-import time, glob, os, platform
+import time
+import glob
+import os
+import platform
 if platform.architecture()[1][:7] == "Windows":
     from win32api import GetSystemMetrics
 from datetime import datetime
@@ -14,7 +17,7 @@ from pyqtgraph.Qt import QtCore, QtGui
 from pylsl import StreamInlet, resolve_stream, local_clock
 
 # Visual imports
-from psychopy import visual, core, clock
+from psychopy import visual, core, clock, event
 
 
 class stimuli(object):
@@ -205,7 +208,7 @@ class lsl_buffer(object):
     def add(self, new):
         data = new[0]
         stamps = new[1]
-        for i in range(len(data)): # Runs over all the moments (time points)
+        for i in range(len(data)):  # Runs over all the moments (time points)
             data[i].append(stamps[i])
 
         self.items.extend(data)
@@ -306,6 +309,7 @@ class emoji_stimulus(object):
         self.stimuli: The stimuli object (class defined in this file) 
             containing all the stimuli from PsychoPy.
         self.num_emojis: Number of emoji images found
+        self.emoji_size: Size of the emojis (in px)
         self.imXaxis: Positions of the emojis along the X axis.
         self.pres_dur: Duration of initial presentation of stimuli
         self.aug_dur: Duration of the augmentations
@@ -371,7 +375,7 @@ class emoji_stimulus(object):
         emoji_path_list = glob.glob("1D Scale-Swaney-Stueve\\*.png")
         num_emojis = len(emoji_path_list)
         self.num_emojis = num_emojis
-        emoji_size = stimulus_dim/2
+        self.emoji_size = stimulus_dim/2
 
         # Iterate over them to create the stimuli and the labels corresponding to the filename
         for i in range(len(emoji_path_list)):
@@ -380,23 +384,22 @@ class emoji_stimulus(object):
 
             # Create the stimuli
             self.stimuli.add(visual.ImageStim(
-                win=self.window, image=emoji_path_list[i], units="pix", size=emoji_size), label)
+                win=self.window, image=emoji_path_list[i], units="pix", size=self.emoji_size), label)
 
         # Order the negative emojis correctly
         self.stimuli.swap(0, 2)
 
         # Blue Augmentation Square Stim Parameters
-        self.stimuli.add(visual.Rect(win=self.window, units="pix", width=emoji_size,
-                                     height=emoji_size, fillColor=[-1, -1, 1], lineColor=[0, 0, 0]), "rectBlue")
+        self.stimuli.add(visual.Rect(win=self.window, units="pix", width=self.emoji_size,
+                                     height=self.emoji_size, fillColor=[-1, -1, 1], lineColor=[0, 0, 0]), "rectBlue")
 
         ## Positioning ##
         # Position across x-axis
         emoji_pos = window_dims[0] * 0.8
-        imXaxis = np.linspace(0 - emoji_pos/2, 0 + emoji_pos/2, num_emojis)
-        self.imXaxis = imXaxis
+        self.imXaxis = np.linspace(0 - emoji_pos/2, 0 + emoji_pos/2, num_emojis)
 
         for i in range(num_emojis):
-            self.stimuli.items[i].pos = (imXaxis[i], 0)
+            self.stimuli.items[i].pos = (self.imXaxis[i], 0)
 
     def quit(self):
         self.window.close()
@@ -463,3 +466,43 @@ class emoji_stimulus(object):
 
             # Wait the Inter Sequence Interval time
             clock.wait(self.iseqi)
+    
+    def confirm(self, rel_position, transform = False):
+        # Highlight the chosen emoji
+        index = rel_position-1
+        green_rect = visual.Rect(win=self.window, units="pix", width = self.emoji_size,
+                                height = self.emoji_size, fillColor = [-1, 1, -1], lineColor=[0,0,0])
+        green_rect.pos = (self.imXaxis[index], 0)
+        green_rect.draw()
+
+        # Transform every emoji into the chosen one if asked and draw
+        if transform:
+            for i in range(self.num_emojis):
+                self.stimuli.items[index].pos = (self.imXaxis[i], 0)
+                self.stimuli.items[index].draw()
+        else: # Or just draw all emojis again
+            for i in range(self.num_emojis):
+                self.stimuli.items[i].draw()
+
+        # Explain the key use
+        text = visual.TextStim(win=self.window, pos = [0, -5],
+                                text="Left = Accept. Right = Deny.")
+        text.draw()
+        
+        # Refresh the window
+        self.window.flip()
+
+        # Wait for the user to press a key
+        response = None
+        while response == None:
+            all_keys = event.getKeys()
+            for key in all_keys:
+                if key == "left":
+                    response = True
+                elif key == "right":
+                    response = False
+
+        # Print and return the response
+        print("The user said that the selection of emoji {0} is {1}".format(rel_position, response))
+        return response   
+                
