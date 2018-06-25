@@ -11,9 +11,6 @@ from pyqtgraph.Qt import QtCore, QtGui
 # Networking imports
 from pylsl import StreamInlet, resolve_stream, local_clock
 
-# Stimuli Imports
-import psychopy as pp
-
 # Custom imports
 import debug_funcs as dfun
 from objects import lsl_stream, stimuli, lsl_buffer
