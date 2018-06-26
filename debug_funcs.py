@@ -60,11 +60,22 @@ def virtual_cognionics(channels=8, srate=500, chunk_size=1, buffer_size=360,
         ch.append_child_value("label", label)
         ch.append_child_value("unit", "microvolts")
         ch.append_child_value("type", "EEG")
-    stream_info.desc().append_child_value("extra info", "none")
+
+    # Here we define some metadata for the IMPEDANCE stream
+    imp_stream_info = StreamInfo("Virtual Cognionics Quick-20 Impedance", "Impeadance",
+                                 channels + 5, srate, "float32", "myuid000001")
+    imp_ch_handle = imp_stream_info.desc().append_child("channels")
+
+    for label in channels_labels:
+        ch = imp_ch_handle.append_child("channel")
+        ch.append_child_value("label", label + "-Z")
+        ch.append_child_value("unit", "kohms")
+        ch.append_child_value("type", "Impedance")
 
     # Here we create an outlet with our information, sending information in chunks of
     # 1 sample and the outgoing buffer size being 360 seconds (max.)
     outlet = StreamOutlet(stream_info, chunk_size, buffer_size)
+    imp_outlet = StreamOutlet(imp_stream_info, chunk_size, buffer_size)
 
     # Now here we create the samples and push them to the network
     print("Now sending data...")
@@ -96,6 +107,7 @@ def virtual_cognionics(channels=8, srate=500, chunk_size=1, buffer_size=360,
 
             # Send
             outlet.push_sample(sample, stamp)
+            imp_outlet.push_sample(sample, stamp)
 
         # Wait for next cycle
         time.sleep(interval)
@@ -125,6 +137,7 @@ def process_rfft(time, signal):
     dBsignal = 20 * sp.log10(fsignal)
 
     return [freq, fsignal, dBsignal]
+
 
 if __name__ == "__main__":
     virtual_cognionics(stype=sys.argv[1], srate=float(sys.argv[2]))
