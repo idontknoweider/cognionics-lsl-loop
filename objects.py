@@ -241,12 +241,16 @@ class lsl_buffer(object):
             imin (kwarg): First index of slice (arrays start with index 0)
             imax (kwarg): Last index of slice (last item will be item imax-1)
             filename (kwarg): Name of the file. Default is buffered_<date and time>
+            timestamped (kwarg): Whether or not to timestamp a custom filename. Default is True
         """
 
+        time_string = datetime.now().strftime("%y%m%d_%H%M%S%f")
         if "filename" in kwargs:
-            file_name = kwargs["filename"]
+            if "timestamp" in kwargs and kwargs["timestamp"] == False:
+                file_name = kwargs["filename"]
+            else:
+                file_name = kwargs["filename"] + time_string
         else:
-            time_string = datetime.now().strftime("%y%m%d_%H%M%S%f")
             file_name = "buffered_" + time_string
 
         # Save the name to the list of names
