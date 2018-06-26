@@ -25,6 +25,10 @@ if __name__ == "__main__":
     print("Connecting to data stream...")
     data_stream = lsl_stream(type="EEG")
 
+    # Connect to the impedances stream
+    # Yeah, whoever wrote the tags in the CogDAQ software wrote this one wrong
+    impedances_stream = lsl_stream(type="Impeadance")
+
     # Get the number of channels from the inlet to use later
     channelsn = data_stream.inlet.channel_count
     print("Number of channels on the stream: {0}".format(channelsn))
@@ -51,21 +55,27 @@ if __name__ == "__main__":
     ## CREATE THE BUFFER ##
     # Create a buffer to hold the samples
     buffer = lsl_buffer()
+    imp_buffer = lsl_buffer()
 
     ## VIRTUAL COGNIONICS EXCEPTION ##
     # For virtual_cognionics notify the stream
     if data_stream.inlet.info().name() == "Virtual Cognionics Quick-20":
         print("Stream is Virtual Cognionics Quick-20")
         start = data_stream.chunk()
+        start_imp = impedances_stream.chunk()
         wait_text = pp.visual.TextStim(win=estimulus.window, pos=[0, 0],
                                        text="Wait please...")
         wait_text.draw()
         estimulus.window.flip()
         pp.clock.wait(2)
         pretty = data_stream.chunk(max_samples=2)
+        pretty_imp = impedances_stream.chunk(max_samples=2)
         please = data_stream.chunk(max_samples=2)
+        please_imp = impedances_stream.chunk(max_samples=2)
         print("Is {0} this {1} working {2}?".format(
             np.shape(start), np.shape(pretty), np.shape(please)))
+        print("Imp {0} this {1} working {2}?".format(
+            np.shape(start_imp), np.shape(pretty_imp), np.shape(please_imp)))
 
     ## START THE EXPERIMENT ##
     print("-- EXPERIMENT STARTING --")
@@ -94,9 +104,11 @@ if __name__ == "__main__":
 
         # Read the data during the sequence (giving some room for error)
         buffer.add(data_stream.chunk(max_samples=ammount))
+        imp_buffer.add(impedances_stream.chunk(max_samples=ammount))
 
         # Save just the last part of the data (the one that has to belong to the trial)
         data = np.asarray(buffer.take_new(ammount))
+        imp_buffer.take_new(ammount)
         print("The shape of the data array {0}: {1}".format(
             s + 1, np.shape(data)))
 
