@@ -55,8 +55,8 @@ def pull_process(stream, func, chunk_size, **kwargs):
             stamp_buffer = lsl_buffer()
 
         # Add data chunk to buffer and compare the size to the required size
-        data_buffer.append(chunk)
-        stamp_buffer.append(timestamps)
+        data_buffer.add(chunk)
+        stamp_buffer.add(timestamps)
 
         # Create a flag to see whether or not to output processed data
         output_proc = False
@@ -70,7 +70,7 @@ def pull_process(stream, func, chunk_size, **kwargs):
             # Process data channel by channel
             processed_data = []
             for i in range(stream.inlet.channel_count):
-                processed_temp = func(time, data_buffer.buffer[:, i])
+                processed_temp = func(time, data_buffer.items[:, i])
                 processed_data.append(processed_temp)
 
             # Get rid of already used data
