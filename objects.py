@@ -213,17 +213,27 @@ class lsl_buffer(object):
 
         self.items.extend(data)
 
-    def take_old(self, ammount):
+    def take_old(self, ammount, delete = False):
+        """ Take the oldest data in the buffer. Has an option to remove the
+        taken data from the buffer. """
         self.save(imax=ammount)
-        return_ = self.items[:ammount]
-        self.items = self.items[ammount:]
-        return return_
+        if delete == True:
+            return_ = self.items[:ammount]
+            self.items = self.items[ammount:]
+            return return_
+        else:
+            return items[:ammount]
 
-    def take_new(self, ammount):
+    def take_new(self, ammount, delete = False):
+        """ Take the newest data in the buffer. Has an option to remove the
+        taken data from the buffer. """
         self.save(imin=ammount)
-        return_ = self.items[ammount:]
-        self.items = self.items[:ammount]
-        return return_
+        if delete == True:
+            return_ = self.items[ammount:]
+            self.items = self.items[:ammount]
+            return return_
+        else:
+            return self.items[ammount:]
 
     def flag(self, size):
         return len(self.items) == size
