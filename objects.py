@@ -20,7 +20,7 @@ from pylsl import StreamInlet, resolve_stream, local_clock
 from psychopy import visual, core, clock, event
 
 
-class stimuli(object):
+class Stimuli(object):
     """
     Class used as a container for the stimuli of the experiment. The advantage
     of using this object mainly comes in the form of using a single draw() method
@@ -73,7 +73,7 @@ class stimuli(object):
         self.labels[pos1], self.labels[pos2] = self.labels[pos2], self.labels[pos1]
 
 
-class lsl_stream(object):
+class LslStream(object):
     """
     This class creates the basic connection between the computer and a Lab Streaming
     Layer data stream. With it connecting is made simpler and pulling and processing
@@ -179,7 +179,7 @@ class lsl_stream(object):
         self.savefile = open(file_name, "w")
 
 
-class lsl_buffer(object):
+class LslBuffer(object):
     """
     This class works like a buffer, or an enhanced list to store data temporally.
     It also stores the data in files when erasing it so you don't lose it but 
@@ -222,7 +222,7 @@ class lsl_buffer(object):
             self.items = self.items[ammount:]
             return return_
         else:
-            return items[:ammount]
+            return self.items[:ammount]
 
     def take_new(self, ammount, delete = False):
         """ Take the newest data in the buffer. Has an option to remove the
@@ -300,7 +300,7 @@ class lsl_buffer(object):
             np.savez_compressed(self.save_names[0], *arrays)
 
 
-class emoji_stimulus(object):
+class EmojiStimulus(object):
     """ This object is created to handle every aspect of the visual representation
     of the emoji speller stimulus. It is created to simplify its use in other scripts
     making the readability skyrocket (due to reasons like: not having 200 lines on a
@@ -382,7 +382,7 @@ class emoji_stimulus(object):
 
         ## Stimuli parameters ##
         # Stimuli holder
-        self.stimuli = stimuli()
+        self.stimuli = Stimuli()
 
         # Emoticon images
         # Get a list with the path to the emoticon image files
