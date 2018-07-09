@@ -8,6 +8,7 @@ import platform
 if platform.architecture()[1][:7] == "Windows":
     from win32api import GetSystemMetrics
 from datetime import datetime
+from scipy.io import loadmat
 
 # Plotting imports
 import pyqtgraph as pg
@@ -18,6 +19,9 @@ from pylsl import StreamInlet, resolve_stream, local_clock
 
 # Visual imports
 from psychopy import visual, core, clock, event
+
+# Pytorch imports
+from torch.utils.data import Dataset
 
 
 class Stimuli(object):
@@ -521,3 +525,26 @@ class EmojiStimulus(object):
         print("The user said that the selection of emoji {0} is {1}".format(
             rel_position, response))
         return response
+
+class ERPDatasetCustom(Dataset):
+    """
+    ERP Dataset used for speller experiments.DataLoader
+    __getitem__ and __len__ have to be overriden.
+    Custom is because we use this to load very specific data,
+    given by C. Guger et al. "How many people are able to 
+    control a P300-based brain-computer interface (BCI)?" 
+    """
+
+    def __init__(self, matname):
+        """ Loads x and y data from .mat files with given names (string format)"""
+        data = loadmat(matname + ".mat")[matname.split("\\")[-1]][0,0]
+        self.train_data = data[0]
+        self.test_data = data[1]
+        self.len = self.train_data.shape[1] + self.test_data.shape[1]
+
+    def __getitem__(self, index):
+        """ Gives an item from the training data """
+        return self.train_data[index]
+
+    def __len__(self):
+        return self.len
