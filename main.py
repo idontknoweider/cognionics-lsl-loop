@@ -14,7 +14,7 @@ from pylsl import StreamInlet, resolve_stream, local_clock
 import psychopy as pp
 
 # Custom imports
-from objects import lsl_stream, stimuli, lsl_buffer, emoji_stimulus
+from objects import LslStream, Stimuli, LslBuffer, EmojiStimulus
 from functions import dict_bash_kwargs, identity
 
 ## Main ##
@@ -23,11 +23,11 @@ if __name__ == "__main__":
     print("-- STREAM CONNECTION --")
     # Connect to the stream and create the stream handle
     print("Connecting to data stream...")
-    data_stream = lsl_stream(type="EEG")
+    data_stream = LslStream(type="EEG")
 
     # Connect to the impedances stream
     # Yeah, whoever wrote the tags in the CogDAQ software wrote this one wrong
-    impedances_stream = lsl_stream(type="Impeadance")
+    impedances_stream = LslStream(type="Impeadance")
 
     # Get the number of channels from the inlet to use later
     channelsn = data_stream.inlet.channel_count
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     ## STIMULUS INITIALISATION ##
     print("-- STIMULUS SETUP -- ")
     # Initialise the stimulus
-    estimulus = emoji_stimulus()
+    estimulus = EmojiStimulus()
     estimulus.experiment_setup()
 
     # Print the shuffling sequence
@@ -54,8 +54,8 @@ if __name__ == "__main__":
 
     ## CREATE THE BUFFER ##
     # Create a buffer to hold the samples
-    buffer = lsl_buffer()
-    imp_buffer = lsl_buffer()
+    buffer = LslBuffer()
+    imp_buffer = LslBuffer()
 
     ## VIRTUAL COGNIONICS EXCEPTION ##
     # For virtual_cognionics notify the stream
