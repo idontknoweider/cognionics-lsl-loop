@@ -217,7 +217,7 @@ class LslBuffer(object):
 
         self.items.extend(data)
 
-    def take_old(self, ammount, delete = False):
+    def take_old(self, ammount, delete=False):
         """ Take the oldest data in the buffer. Has an option to remove the
         taken data from the buffer. """
         self.save(imax=ammount)
@@ -228,7 +228,7 @@ class LslBuffer(object):
         else:
             return self.items[:ammount]
 
-    def take_new(self, ammount, delete = False):
+    def take_new(self, ammount, delete=False):
         """ Take the newest data in the buffer. Has an option to remove the
         taken data from the buffer. """
         self.save(imin=ammount)
@@ -526,6 +526,7 @@ class EmojiStimulus(object):
             rel_position, response))
         return response
 
+
 class ERPDatasetCustom(Dataset):
     """
     ERP Dataset used for speller experiments.DataLoader
@@ -537,7 +538,7 @@ class ERPDatasetCustom(Dataset):
 
     def __init__(self, matname):
         """ Loads x and y data from .mat files with given names (string format)"""
-        data = loadmat(matname + ".mat")[matname.split("\\")[-1]][0,0]
+        data = loadmat(matname + ".mat")[matname.split("\\")[-1]][0, 0]
         self.train_data = data[0]
         self.test_data = data[1]
         self.len = self.train_data.shape[1] + self.test_data.shape[1]
