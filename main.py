@@ -14,7 +14,7 @@ from pylsl import StreamInlet, resolve_stream, local_clock
 import psychopy as pp
 
 # Custom imports
-from objects import LslStream, Stimuli, LslBuffer, EmojiStimulus
+from classes import LslStream, Stimuli, LslBuffer, EmojiStimulus
 from functions import dict_bash_kwargs, identity
 
 ## Main ##

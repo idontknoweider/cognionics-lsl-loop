@@ -13,7 +13,7 @@ from pylsl import StreamInlet, resolve_stream, local_clock
 
 # Custom imports
 import debug_funcs as dfun
-from objects import lsl_stream, stimuli, lsl_buffer
+from classes import LslStream, Stimuli, LslBuffer
 
 
 def pull_process(stream, func, chunk_size, **kwargs):
@@ -51,8 +51,8 @@ def pull_process(stream, func, chunk_size, **kwargs):
         global data_buffer
         global stamp_buffer
         if not "data_buffer" in globals():
-            data_buffer = lsl_buffer()
-            stamp_buffer = lsl_buffer()
+            data_buffer = LslBuffer()
+            stamp_buffer = LslBuffer()
 
         # Add data chunk to buffer and compare the size to the required size
         data_buffer.add(chunk)
@@ -91,7 +91,7 @@ def pull_process(stream, func, chunk_size, **kwargs):
 if __name__ == "__main__":
 
     # Connect via LSL to data stream
-    data_stream = lsl_stream(type="EEG")
+    data_stream = LslStream(type="EEG")
 
     # Get the number of channels from the inlet to use later
     channelsn = data_stream.inlet.channel_count
