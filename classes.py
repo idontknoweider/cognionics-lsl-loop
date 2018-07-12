@@ -539,8 +539,8 @@ class ERPDatasetCustom(Dataset):
     def __init__(self, filepath):
         """ Loads x and y data from .mat files with given names (string format)"""
         data = loadmat(filepath)[filepath.split("\\")[-1].split(".")[-2]][0, 0]
-        self.train_data = data[0]
-        self.test_data = data[1]
+        self.train_data = data["train"]
+        self.test_data = data["test"]
         self.len = self.train_data.shape[1] + self.test_data.shape[1]
 
     def __getitem__(self, index):
