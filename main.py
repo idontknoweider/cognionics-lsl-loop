@@ -15,7 +15,7 @@ import psychopy as pp
 
 # Custom imports
 from classes import LslStream, Stimuli, LslBuffer, EmojiStimulus
-from functions import dict_bash_kwargs, identity
+from functions import dict_bash_kwargs
 
 ## Main ##
 if __name__ == "__main__":
