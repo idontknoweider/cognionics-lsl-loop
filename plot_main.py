@@ -86,6 +86,7 @@ def pull_process(stream, func, chunk_size, **kwargs):
         else:
             return timestamps, data, [], output_proc
 
+
 # Main
 # To execute if script is executed as main (direct execution, not as an import)
 if __name__ == "__main__":
@@ -102,9 +103,9 @@ if __name__ == "__main__":
     win = pg.GraphicsWindow()
     win.setWindowTitle("LSL Plot " + data_stream.inlet.info().name())
     plt = win.addPlot()
-    plt.setLimits(xMin = 0.0, xMax = plot_duration, yMin = -1.0 * \
-        (data_stream.inlet.channel_count - 1), yMax = 1.0)
-    
+    plt.setLimits(xMin=0.0, xMax=plot_duration, yMin=-1.0 *
+                  (data_stream.inlet.channel_count - 1), yMax=1.0)
+
     t0 = [local_clock()] * data_stream.inlet.channel_count
     curves = []
     for ch_ix in range(data_stream.inlet.channel_count):
@@ -114,7 +115,7 @@ if __name__ == "__main__":
     def update():
         # Be able to modify this global variables
         global curves, t0
-        chunk, timestamps = data_stream.chunk(timeout = 0.0)
+        chunk, timestamps = data_stream.chunk(timeout=0.0)
         print("LONG:" + str(len(timestamps)))
         if timestamps:
             # print(chunk)
@@ -137,5 +138,5 @@ if __name__ == "__main__":
 
     timer = QtCore.QTimer()
     timer.timeout.connect(update)
-    timer.start(5) # Let some time for the source to create data
+    timer.start(5)  # Let some time for the source to create data
     QtGui.QApplication.instance().exec_()

@@ -539,18 +539,20 @@ class ERPDatasetCustom(Dataset):
     control a P300-based brain-computer interface (BCI)?" 
     """
 
-    def __init__(self, filepath, concatenate = True):
+    def __init__(self, filepath, concatenate=True):
         """ Loads x and y data from .mat files with given names (string format)"""
         data = loadmat(filepath)[filepath.split("\\")[-1].split(".")[-2]][0, 0]
         self.train_data = data["train"]
         self.test_data = data["test"]
         self.len = self.train_data.shape[1] + self.test_data.shape[1]
-        self.train_data = erp_into_chunks(self.train_data, concatenate = concatenate)
-        self.test_data = erp_into_chunks(self.test_data, concatenate = concatenate)
+        self.train_data = erp_into_chunks(
+            self.train_data, concatenate=concatenate)
+        self.test_data = erp_into_chunks(
+            self.test_data, concatenate=concatenate)
 
     def __getitem__(self, index):
         """ Gives an item from the training data """
         return self.train_data[index]
 
     def __len__(self):
-        return self.len    
+        return self.len
