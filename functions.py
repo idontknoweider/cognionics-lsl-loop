@@ -18,6 +18,22 @@ def dict_bash_kwargs():
     return dict(args)
 
 
+def rowcol_paradigm():
+    """
+    This function defines a list containing the rowcol paradigm 
+    of BCI spellers to make it easier to decypher using only 
+    indices for the columns and rows from 1 to 6 since we have 
+    36 characters.
+    """
+    char1 = ["A", "B", "C", "D", "E", "F"]
+    char2 = ["G", "H", "I", "J", "K", "L"]
+    char3 = ["M", "N", "O", "P", "Q", "R"]
+    char4 = ["S", "T", "U", "V", "W", "X"]
+    char5 = ["Y", "Z", "0", "1", "2", "3"]
+    char6 = ["4", "5", "6", "7", "8", "9"]
+    return [char1, char2, char3, char4, char5, char6]
+
+
 def erp_into_chunks(erp_array, concatenate=False):
     """
     This function is used to change the format of the ERP data from the
@@ -118,39 +134,59 @@ def compact_dataset(dataset):
     What we do here is take those two arrays and make them one.
     We also take out the first long array containing no info.
     """
-    feat = dataset["features"][1:]
-    rc = dataset["rowcol"][1:]
-    flg = dataset["flags"][1:]
+    feat = list(dataset["features"][1:])
+    rc = list(dataset["rowcol"][1:])
+    flg = list(dataset["flags"][1:])
     iter_ = 0
 
     while True:
-        feat[iter_].extend(feat[iter_+1])
+        if np.all(feat[iter_] == feat[-1]) or np.all(feat[iter_+1] == feat[-1]):
+            break
+
+        feat[iter_] = np.append(feat[iter_], feat[iter_+1])
 
         del(feat[iter_+1])
         del(rc[iter_+1])
         del(flg[iter_+1])
 
-        if feat[iter_] == feat[-1] or feat[iter_+1] == feat[-1]:
-            break
-
         iter_ += 1
 
     feat = np.array([np.array(item) for item in feat])
 
-    return {"features": feat, "rowcol": rc, "flags": flg}
+    return {"features": feat, "rowcol": np.array(rc), "flags": np.array(flg)}
 
 
-def rowcol_paradigm():
-    """
-    This function defines a list containing the rowcol paradigm 
-    of BCI spellers to make it easier to decypher using only 
-    indices for the columns and rows from 1 to 6 since we have 
-    36 characters.
-    """
-    char1 = ["A", "B", "C", "D", "E", "F"]
-    char2 = ["G", "H", "I", "J", "K", "L"]
-    char3 = ["M", "N", "O", "P", "Q", "R"]
-    char4 = ["S", "T", "U", "V", "W", "X"]
-    char5 = ["Y", "Z", "0", "1", "2", "3"]
-    char6 = ["4", "5", "6", "7", "8", "9"]
-    return [char1, char2, char3, char4, char5, char6]
+def standarise_features(dataset, info=False):
+    """ Standarise the features vector of a dataset to be able
+    to use it in different model. This standarisation takes out
+    the items that have different length than the initial item."""
+
+    # Load different parts of the dataset
+    feat = dataset["features"]
+    rc = dataset["rowcol"]
+    flg = dataset["flags"]
+
+    # Define standard lengths
+    std_len_1 = len(feat[3])
+    std_len_2 = len(feat[4])
+
+    # Check which elements have length equal to the standar length
+    std_bool_list_1 = np.asarray([len(item) for item in feat]) == std_len_1
+    std_bool_list_2 = np.asarray([len(item) for item in feat]) == std_len_2
+    std_bool_list = np.asarray(
+        [bool(std_bool_list_1[i] + std_bool_list_2[i]) for i in range(len(std_bool_list_1))])
+
+    # Keep only those items
+    std_feat = np.asarray(feat)[std_bool_list]
+    std_rc = np.asarray(rc)[std_bool_list]
+    std_flg = np.asarray(flg)[std_bool_list]
+
+    # Make sure all of the items inside the feature array are arrays
+    std_feat = np.array([np.array(item) for item in std_feat])
+
+    # Check how many items have been lost
+    if info == True:
+        print("The standarisation took away {0} items".format(
+            len(feat)-len(std_feat)))
+
+    return {"features": std_feat, "rowcol": std_rc, "flags": std_flg}
