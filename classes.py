@@ -24,7 +24,7 @@ from psychopy import visual, core, clock, event
 from torch.utils.data import Dataset
 
 # Import functions
-from functions import erp_into_chunks
+from functions import erp_into_chunks, compact_dataset, standarise_features
 
 
 class Stimuli(object):
@@ -530,29 +530,69 @@ class EmojiStimulus(object):
         return response
 
 
-class ERPDatasetCustom(Dataset):
+class ERPDataset(Dataset):
     """
-    ERP Dataset used for speller experiments.DataLoader
-    __getitem__ and __len__ have to be overriden.
-    Custom is because we use this to load very specific data,
-    given by C. Guger et al. "How many people are able to 
-    control a P300-based brain-computer interface (BCI)?" 
+    ERP Dataset used to train and test machine learning models for BCI speller experiments.
+    Due to the object type (Dataset, from pytorch), __getitem__ and __len__ have to be overriden.
+    The dataset is from C. Guger et al. "How many people are able to control a P300-based brain-
+    computer interface (BCI)?"
+
+    This data is found in .mat files. For that, the library io from scipy is used. That gives us
+    some really nasty looking objects that we further transform into numpy arrays. Inside those data,
+    there are arrays meant for the training and arrays meant for the testing already prepared. After
+    separating those, we further separate the arrays into the features, the row-column indicators
+    (that tell us which of the row or columns in the speller's interface is being augmented) and the
+    target labels, that tells us wether or not that row/column was the one the user was looking at 
+    (and, therefore, if there is a P300 in that chunk of data).
+
+    After separation in these three arrays, further processing is done. Features according to the same
+    step in the experiment (during augmentation or inter-stimuli interval (ISI)) are put together to
+    create feature vectors with only one row/column indicator or one target label, which makes more
+    sense than having labels for each point in data that does not have any features that help identify
+    P300. Also, in each of these feature vectors all the channels are concatenated, so that we have
+    only one vector containing all the 9 channels. 
+    
+    Apparently, there are arrays cointaining unimportant data before the start of each sequence. 
+    These arrays are first removed in what we called standarisation, that leaves us with feature arrays
+    just for the time during the augmentation and in the ISI. Then due to the nature of the P300, each
+    pair of augmentation and later ISI arrays are compacted into one array, which will be the feature
+    vector used for training and testing. This is called compacting.    
     """
 
     def __init__(self, filepath, concatenate=True):
-        """ Loads x and y data from .mat files with given names (string format)"""
-        data = loadmat(filepath)[filepath.split("\\")[-1].split(".")[-2]][0, 0]
-        self.train_data = data["train"]
-        self.test_data = data["test"]
-        self.len = self.train_data.shape[1] + self.test_data.shape[1]
-        self.train_data = erp_into_chunks(
-            self.train_data, concatenate=concatenate)
-        self.test_data = erp_into_chunks(
-            self.test_data, concatenate=concatenate)
+        # Use load method to load data
+        self.load(filepath)
+
+        # Use the process function
+        self.preprocess()
 
     def __getitem__(self, index):
         """ Gives an item from the training data """
         return self.train_data[index]
 
     def __len__(self):
-        return self.len
+        return self.train_data.shape[1] + self.test_data.shape[1]
+
+    def load(self, filepath):
+        # This line is mainly to clean the format using only the filepath
+        data = loadmat(filepath)[filepath.split("\\")[-1].split(".")[-2]][0, 0]
+
+        # Extract the train and test data from the void object
+        self.train_data = data["train"]
+        self.test_data = data["test"]
+
+    def preprocess(self):
+        # Use the into_chunks function
+        self.train_data = erp_into_chunks(self.train_data, concatenate = True)
+        self.test_data = erp_into_chunks(self.test_data, concatenate = True)
+
+        # Use the standarisation function
+        self.train_data = standarise_features(self.train_data)
+        self.test_data = standarise_features(self.test_data)
+
+        # Use the compacting funcion
+        self.train_data = compact_dataset(self.train_data)
+        self.test_data = compact_dataset(self.test_data)
+
+        
+
