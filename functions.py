@@ -1,5 +1,6 @@
 # System import
 import sys
+import numpy as np
 
 
 def dict_bash_kwargs():
@@ -91,11 +92,60 @@ def erp_into_chunks(erp_array, concatenate=False):
     return {"features": features, "rowcol": rowcol[:-1], "flags": flags[:-1]}
 
 
+def dataset_probe(dataset):
+    print("! DATASET: !")
+
+    feat = dataset["features"]
+    rc = dataset["rowcol"]
+    flg = dataset["flags"]
+
+    # Check the dataset's characteristics and print them out
+    print("Length of features, rowcol and flags: {0}, {1}, {2}".format(
+        len(feat), len(rc), len(flg)))
+    print("Length of the first 5 feature arrays:")
+    i = 0
+    for i in range(5):
+        print("\t Data item number {0} has length {1}".format(i, len(feat[i])))
+        print("\t \t and rowcol {0} and flag {1}".format(rc[i], flg[i]))
+    print("\t Last data item number has length {0}".format(len(feat[-1])))
+    print("Each item of the flags has a type {0}".format(type(flg[0])))
+    print("\n")
+
+
+def compact_dataset(dataset):
+    """ Apparently we have shorter arrays containing the
+    augmentation and longer arrays containing no augmentation.
+    What we do here is take those two arrays and make them one.
+    We also take out the first long array containing no info.
+    """
+    feat = dataset["features"][1:]
+    rc = dataset["rowcol"][1:]
+    flg = dataset["flags"][1:]
+    iter_ = 0
+
+    while True:
+        feat[iter_].extend(feat[iter_+1])
+
+        del(feat[iter_+1])
+        del(rc[iter_+1])
+        del(flg[iter_+1])
+
+        if feat[iter_] == feat[-1] or feat[iter_+1] == feat[-1]:
+            break
+
+        iter_ += 1
+
+    feat = np.array([np.array(item) for item in feat])
+
+    return {"features": feat, "rowcol": rc, "flags": flg}
+
+
 def rowcol_paradigm():
     """
-    This function defines a list containing the rowcol paradigm to make
-    it easier to decypher using only indices for the columns and
-    rows from 1 to 6 since we have 36 characters.
+    This function defines a list containing the rowcol paradigm 
+    of BCI spellers to make it easier to decypher using only 
+    indices for the columns and rows from 1 to 6 since we have 
+    36 characters.
     """
     char1 = ["A", "B", "C", "D", "E", "F"]
     char2 = ["G", "H", "I", "J", "K", "L"]
