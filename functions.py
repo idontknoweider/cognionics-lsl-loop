@@ -34,80 +34,6 @@ def rowcol_paradigm():
     return [char1, char2, char3, char4, char5, char6]
 
 
-def erp_into_chunks(erp_array, concatenate=False):
-    """
-    This function is used to change the format of the ERP data from the
-    dataset used to train LDA and networks. It takes the (#channels
-    + rowcol + flag) x # features array and turns it into 3 lists, that
-    contain different lists for different packets of row/column augmentations.
-
-    INPUT:
-        erp_array: An array shape 11 x # data points, being channels 10 the 
-            rowcol indicator (6 rows and 6 columns ==> 1 to 12) and the channel
-            11 the trigger indicator (whether the augmented rowcol is the one
-            the user is focusing on (1) or not (0)).
-        concatenate: Take the 9 data channels and concatenate them in each of the
-            bins to create a one dimensional feature vector of length 9 x single
-            channel feature length
-    OUTPUT:
-        Dictionary, containing three lists of the same length (number of
-            sequences). First one contains lists with the features
-    """
-
-    # Initialize the lists that are going to hold all the
-    features = []
-    rowcol = []
-    flags = []
-
-    # Condition to know whether or not create empty lists for temp holding items
-    init_loop = True
-
-    # Start the iterations
-    for i in range(erp_array.shape[1]):
-        # Extract the information from the erp_array
-        data = erp_array[0:9, i]
-        rowcol_ind = erp_array[9, i]
-        flag = erp_array[10, i]
-
-        # If there's data in the temp list and it is a different rowcol, store it as a feature vector
-        if rowcol != [] and rowcol_ind != rowcol[-1]:
-            # Set flag to reset temp lists
-            init_loop = True
-
-            # In case we want the features to be concatenated
-            if concatenate == True:
-                concatenation = []
-                for i in range(len(features_temp)):
-                    concatenation.extend(features_temp[i])
-                features_temp = concatenation
-
-            # Save temp lists to final lists
-            features.append(features_temp)
-
-        # Initialize temporary lists
-        if init_loop == True:
-            # this is going to hold all the channels
-            features_temp = [[] for i in range(9)]
-            init_loop = False
-
-            # This is used to not repeat the same rowcol or flag over and over in the list
-            first_flag = True
-
-        # Add the data to the temp lists
-        for i in range(len(features_temp)):
-            features_temp[i].append(data[i])
-
-        # If first data sample in sequence, save rowcol and flag
-        if first_flag == True:
-            rowcol.append(rowcol_ind)
-            flags.append(flag)
-            first_flag = False
-
-    # Return a dictionary with the feature vectors and so on. Rowcol and
-    #   flags have an extra value due to the implementation.
-    return {"features": features, "rowcol": rowcol[:-1], "flags": flags[:-1]}
-
-
 def dataset_probe(dataset):
     print("! DATASET: !")
 
@@ -128,65 +54,76 @@ def dataset_probe(dataset):
     print("\n")
 
 
-def compact_dataset(dataset):
-    """ Apparently we have shorter arrays containing the
-    augmentation and longer arrays containing no augmentation.
-    What we do here is take those two arrays and make them one.
-    We also take out the first long array containing no info.
+def preprocess_erp(erp_array):
     """
-    feat = list(dataset["features"][1:])
-    rc = list(dataset["rowcol"][1:])
-    flg = list(dataset["flags"][1:])
-    iter_ = 0
+    This function is used to change the format of the ERP data from the
+    dataset used to train LDA and networks. It takes the (#channels
+    + rowcol + flag) x # features array and turns it into 3 lists, that
+    contain different lists for different packets of row/column augmentations.
 
-    while True:
-        if np.all(feat[iter_] == feat[-1]) or np.all(feat[iter_+1] == feat[-1]):
-            break
+    INPUT:
+        erp_array: An array shape 11 x # data points, being channels 10 the 
+            rowcol indicator (6 rows and 6 columns ==> 1 to 12) and the channel
+            11 the trigger indicator (whether the augmented rowcol is the one
+            the user is focusing on (1) or not (0)).
+    OUTPUT:
+        Dictionary, containing three lists of the same length (number of
+            sequences). First one contains lists with the features
+    """
 
-        feat[iter_] = np.append(feat[iter_], feat[iter_+1])
+    # Initialize the lists that are going to hold all the arrays and values
+    features = []
+    rowcol = []
+    flags = []
 
-        del(feat[iter_+1])
-        del(rc[iter_+1])
-        del(flg[iter_+1])
+    # Start the iterations
+    first_index = 0
+    for i in range(erp_array.shape[1]):
+        # If there's data in the temp list and it is a different rowcol, store it as a feature vector
+        if i+1 == erp_array.shape[1] or erp_array[9, i] != erp_array[9, i+1]:
+            # Save features of this chunk to list
+            features.append(erp_array[0:9, first_index:i+1])
+            rowcol.append(erp_array[9, i])
+            flags.append(erp_array[10, i])
 
-        iter_ += 1
+            # First index for next chunk is next index
+            first_index = i+1
 
-    feat = np.array([np.array(item) for item in feat])
-
-    return {"features": feat, "rowcol": np.array(rc), "flags": np.array(flg)}
-
-
-def standarise_features(dataset, info=False):
-    """ Standarise the features vector of a dataset to be able
-    to use it in different model. This standarisation takes out
-    the items that have different length than the initial item."""
-
-    # Load different parts of the dataset
-    feat = dataset["features"]
-    rc = dataset["rowcol"]
-    flg = dataset["flags"]
+    ## Here we standarise the features' vectors to have the same
+    ##  normal lengths, because we can find anomalous vectors.
 
     # Define standard lengths
-    std_len_1 = len(feat[3])
-    std_len_2 = len(feat[4])
+    std_len_1 = features[3].shape[1]
+    std_len_2 = features[4].shape[1]
 
     # Check which elements have length equal to the standar length
-    std_bool_list_1 = np.asarray([len(item) for item in feat]) == std_len_1
-    std_bool_list_2 = np.asarray([len(item) for item in feat]) == std_len_2
-    std_bool_list = np.asarray(
-        [bool(std_bool_list_1[i] + std_bool_list_2[i]) for i in range(len(std_bool_list_1))])
+    index = 0
+    while np.all(features[index] != features[-1]):
+        iter_len = features[index].shape[1]
 
-    # Keep only those items
-    std_feat = np.asarray(feat)[std_bool_list]
-    std_rc = np.asarray(rc)[std_bool_list]
-    std_flg = np.asarray(flg)[std_bool_list]
+        # If elements have different length remove them
+        if iter_len != std_len_1 and iter_len != std_len_2:
+            del(features[index])
+            del(rowcol[index])
+            del(flags[index])
+        else:   # Deletion puts the next item in the deleted spot, this else avoids missing items
+            index += 1
 
-    # Make sure all of the items inside the feature array are arrays
-    std_feat = np.array([np.array(item) for item in std_feat])
+    ## Compacting and making feature vectors for the training and testing
+    # Start iterating over all the items in the lists
+    iter_ = 0   
+    while np.all(features[iter_] != features[-1]):
+        # The flatten does the channel concatenation
+        features[iter_] = np.append(features[iter_], features[iter_ + 1], axis = 0).flatten() 
+        del(features[iter_ + 1])
+        del(rowcol[iter_ + 1])
+        del(flags[iter_ + 1])
+        iter_ += 1
 
-    # Check how many items have been lost
-    if info == True:
-        print("The standarisation took away {0} items".format(
-            len(feat)-len(std_feat)))
+    # Transform into an array
+    features = np.asarray(features)
+    rowcol = np.asarray(rowcol)
+    flags = np.asarray(flags)
 
-    return {"features": std_feat, "rowcol": std_rc, "flags": std_flg}
+    # Return a dictionary with the feature vectors and labels.
+    return {"features": features, "rowcol": rowcol, "flags": flags}
