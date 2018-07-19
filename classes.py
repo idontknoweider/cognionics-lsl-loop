@@ -24,7 +24,7 @@ from psychopy import visual, core, clock, event
 from torch.utils.data import Dataset
 
 # Import functions
-from functions import erp_into_chunks, compact_dataset, standarise_features
+from functions import preprocess_erp
 
 
 class Stimuli(object):
@@ -551,7 +551,7 @@ class ERPDataset(Dataset):
     sense than having labels for each point in data that does not have any features that help identify
     P300. Also, in each of these feature vectors all the channels are concatenated, so that we have
     only one vector containing all the 9 channels. 
-    
+
     Apparently, there are arrays cointaining unimportant data before the start of each sequence. 
     These arrays are first removed in what we called standarisation, that leaves us with feature arrays
     just for the time during the augmentation and in the ISI. Then due to the nature of the P300, each
@@ -559,7 +559,7 @@ class ERPDataset(Dataset):
     vector used for training and testing. This is called compacting.    
     """
 
-    def __init__(self, filepath, concatenate=True):
+    def __init__(self, filepath):
         # Use load method to load data
         self.load(filepath)
 
@@ -582,17 +582,6 @@ class ERPDataset(Dataset):
         self.test_data = data["test"]
 
     def preprocess(self):
-        # Use the into_chunks function
-        self.train_data = erp_into_chunks(self.train_data, concatenate = True)
-        self.test_data = erp_into_chunks(self.test_data, concatenate = True)
-
-        # Use the standarisation function
-        self.train_data = standarise_features(self.train_data)
-        self.test_data = standarise_features(self.test_data)
-
-        # Use the compacting funcion
-        self.train_data = compact_dataset(self.train_data)
-        self.test_data = compact_dataset(self.test_data)
-
-        
-
+        # Use the preprocessing function on both sets of data
+        self.train_data = preprocess_erp(self.train_data)
+        self.test_data = preprocess_erp(self.test_data)
