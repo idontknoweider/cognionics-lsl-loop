@@ -43,7 +43,7 @@ def dataset_probe(dataset):
 
     # Check the dataset's characteristics and print them out
     print("Length of features, rowcol and flags: {0}, {1}, {2}".format(
-        len(feat), len(rc), len(flg)))
+        feat.shape, len(rc), len(flg)))
     print("Length of the first 5 feature arrays:")
     i = 0
     for i in range(5):
@@ -92,29 +92,34 @@ def preprocess_erp(erp_array):
     ## Here we standarise the features' vectors to have the same
     ##  normal lengths, because we can find anomalous vectors.
 
+    # The first element is outside of the experiment, giving just baseline information
+    #   As such, we delete it
+    del(features[0])
+    del(rowcol[0])
+    del(flags[0])
+
     # Define standard lengths
-    std_len_1 = features[3].shape[1]
-    std_len_2 = features[4].shape[1]
+    std_len_1 = features[0].shape[1]    # Flash
+    std_len_2 = features[1].shape[1]    # Inter Stimuli Interval
 
     # Check which elements have length equal to the standar length
     index = 0
-    while np.all(features[index] != features[-1]):
+    while not index >= len(features):
         iter_len = features[index].shape[1]
-
-        # If elements have different length remove them
+        # Reshape the elements after sequences to have the same shapes as ISI arrays
         if iter_len != std_len_1 and iter_len != std_len_2:
-            del(features[index])
-            del(rowcol[index])
-            del(flags[index])
-        else:   # Deletion puts the next item in the deleted spot, this else avoids missing items
-            index += 1
+            if features[index-1].shape[1] == std_len_1:
+                features[index] = features[index][:, :std_len_2]
+            elif features[index-1].shape[1] == std_len_2:
+                features[index] = features[index][:, :std_len_1]
+        index += 1
 
     ## Compacting and making feature vectors for the training and testing
     # Start iterating over all the items in the lists
     iter_ = 0   
-    while np.all(features[iter_] != features[-1]):
+    while not iter_+1 >= len(features):
         # The flatten does the channel concatenation
-        features[iter_] = np.append(features[iter_], features[iter_ + 1], axis = 0).flatten() 
+        features[iter_] = np.append(features[iter_], features[iter_ + 1], axis = 1).flatten() 
         del(features[iter_ + 1])
         del(rowcol[iter_ + 1])
         del(flags[iter_ + 1])
@@ -124,6 +129,8 @@ def preprocess_erp(erp_array):
     features = np.asarray(features)
     rowcol = np.asarray(rowcol)
     flags = np.asarray(flags)
+
+    # print("Shape: {0}, Len1: {1}, Len2: {2}, Type: {3}, Type2: {4}".format(features.shape, len(features), features[0].shape, type(features), type(features[0])))
 
     # Return a dictionary with the feature vectors and labels.
     return {"features": features, "rowcol": rowcol, "flags": flags}
