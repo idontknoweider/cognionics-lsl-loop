@@ -10,10 +10,6 @@ if platform.architecture()[1][:7] == "Windows":
 from datetime import datetime
 from scipy.io import loadmat
 
-# Plotting imports
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
-
 # Networking imports
 from pylsl import StreamInlet, resolve_stream, local_clock
 
