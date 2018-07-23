@@ -61,6 +61,7 @@ class Stimuli(object):
         for i in range(len(self.items)):
             self.items[i].draw()
 
+    # Draw some stimuli in an interval given by imin-imax
     def draw_int(self, imin, imax):
         for i in range(len(self.items[imin:imax])):
             self.items[imin+i].draw()
@@ -70,11 +71,25 @@ class Stimuli(object):
         print("Labels (in order): {0}".format(self.labels))
 
     # Swap the place of two stimuli, since the drawing is done from first to last
-
     def swap(self, pos1, pos2):
         self.items[pos1], self.items[pos2] = self.items[pos2], self.items[pos1]
         self.labels[pos1], self.labels[pos2] = self.labels[pos2], self.labels[pos1]
 
+    # Invert the order of the stimuli
+    def invert(self):
+        self.items = self.items[::-1]
+        self.labels = self.labels[::-1]
+
+    # Put an stimulus first in the list
+    def first(self, position):
+        for i in range(position):
+            self.swap(i, position)
+
+    # Put an stimulus lastin the list
+    def last(self, position):
+        self.invert()
+        self.first(-position)
+        self.invert()
 
 class LslStream(object):
     """
@@ -97,7 +112,6 @@ class LslStream(object):
 
     def __init__(self, **stream_info):
         self.connect(**stream_info)
-        self.save_flag = False
 
     def connect(self, **stream_info):
         """
@@ -156,31 +170,6 @@ class LslStream(object):
         # chunk, timestamp = self.inlet.pull_chunk(**kwargs)
         return self.inlet.pull_chunk(**kwargs)
 
-    def setup_saving(self, **kwargs):
-        """
-        This method opens a file according to a given filename or according
-        to the date of use and sets up a flag so if something starts pulling
-        data from the stream that data is also stored in the file.
-
-        Arguments:
-            filename: Name of the file where the user wants to save the data
-
-        """
-        # Set a flag to True so code knows it has to save
-        self.save_flag = True
-
-        # File name as a .dat file. If none given use default format.
-        if "filename" in kwargs:
-            file_name = kwargs["filename"]
-            if file_name[-4] != ".dat":
-                file_name = file_name + ".dat"
-        else:
-            time_string = time.strftime("%y%m%d_%H%M%S", time.localtime())
-            file_name = "LSL_data_" + time_string + ".dat"
-
-        # Open saving file as write only
-        self.savefile = open(file_name, "w")
-
 
 class LslBuffer(object):
     """
@@ -212,14 +201,22 @@ class LslBuffer(object):
         data = new[0]
         stamps = new[1]
         for i in range(len(data)):  # Runs over all the moments (time points)
+            # Timestamps become another column on the list
             data[i].append(stamps[i])
 
         self.items.extend(data)
 
-    def take_old(self, ammount, delete=False):
+    def take_old(self, ammount, delete=False, **kwargs):
         """ Take the oldest data in the buffer. Has an option to remove the
         taken data from the buffer. """
-        self.save(imax=ammount)
+
+        # Save data to file
+        if "filename" in kwargs:
+            self.save(imax=ammount, filename=kwargs["filename"])
+        else:
+            self.save(imax=ammount)
+
+        # Delete data taken if asked
         if delete == True:
             return_ = self.items[:ammount]
             self.items = self.items[ammount:]
@@ -227,10 +224,17 @@ class LslBuffer(object):
         else:
             return self.items[:ammount]
 
-    def take_new(self, ammount, delete=False):
+    def take_new(self, ammount, delete=False, **kwargs):
         """ Take the newest data in the buffer. Has an option to remove the
         taken data from the buffer. """
-        self.save(imin=ammount)
+
+        # Save data to file
+        if "filename" in kwargs:
+            self.save(imin=ammount, filename=kwargs["filename"])
+        else:
+            self.save(imin=ammount)
+
+        # Delete data taken if asked
         if delete == True:
             return_ = self.items[ammount:]
             self.items = self.items[:ammount]
@@ -239,7 +243,8 @@ class LslBuffer(object):
             return self.items[ammount:]
 
     def flag(self, size):
-        return len(self.items) == size
+        # True if buffer bigger or equal than given size
+        return len(self.items) >= size
 
     def clear(self, names=False):
         self.items = []
@@ -459,28 +464,40 @@ class EmojiStimulus(object):
             np.random.shuffle(aug_shuffle[i, :])
         self.aug_shuffle = aug_shuffle
 
+    def play_emoji(self, s, e):
+        """ Draw emoji augmentation from sequence s and emoji e"""
+
+        # Move blue rectangle and draw everything
+        self.stimuli.items[-1].pos = (
+            self.imXaxis[self.aug_shuffle[s, e]], 0)
+        self.stimuli.draw()
+
+        # Window flip
+        self.window.flip()
+
+        # Wait the aug_dur time
+        clock.wait(self.aug_dur)
+
+        # Draw just the emojis, getting rid of the rectangle
+        self.stimuli.draw_int(0, -1)
+
+        # Window flip
+        self.window.flip()
+
+        # Pause aug_wait time
+        clock.wait(self.aug_wait)
+
+    def play_seq(self, s):
+        """ Play sequence number s as aug_shuffle is ordered """
+
+        for e in range(self.num_emojis):
+            self.play_emoji(s, e)
+
     def play(self):
+        """ Play all the sequences together """
+
         for s in range(self.num_seq):
-            for e in range(self.num_emojis):
-                # Move blue rectangle and draw everything
-                self.stimuli.items[-1].pos = (
-                    self.imXaxis[self.aug_shuffle[s, e]], 0)
-                self.stimuli.draw()
-
-                # Window flip
-                self.window.flip()
-
-                # Wait the aug_dur time
-                clock.wait(self.aug_dur)
-
-                # Draw just the emojis, getting rid of the rectangle
-                self.stimuli.draw_int(0, -1)
-
-                # Window flip
-                self.window.flip()
-
-                # Pause aug_wait time
-                clock.wait(self.aug_wait)
+            self.play_seq(s)
 
             # Wait the Inter Sequence Interval time
             clock.wait(self.iseqi)
