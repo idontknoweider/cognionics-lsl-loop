@@ -49,7 +49,7 @@ The last file, `erp.py`, is a file to train an LDA model with the BNCI dataset (
 
 ### Existing experiment
 
-The experiment all these is intended for is a Brain Computer Interface based speller using emojis instead of character for faster communcation of emotions.
+The experiment all these files are intended for is a Brain Computer Interface based speller using emojis instead of character for faster communcation of emotions.
 
 I this experiment the Cognionics Inc,. EEG headset is connected to a computer via Bluetooth using the USB stick provided with the headset and the Cognionics Data Acquisition Software (DAQ) as software that reads the signal. It is important to know that the DAQ software only is available for the OS Windows. This software can create a data stream over the Lab Network using Lab Streaming Layer (LSL). This data stream also has a buffer, that will hold samples that are not being pulled by a client. These data streams in the network can be found with different LSL interfaces. In this case, the Python interface is being use. With it, we get the data from the stream. The data obtained from the stream will later be processed to have online interaction in the experiment and also saved, to be able to work with it online.
 
