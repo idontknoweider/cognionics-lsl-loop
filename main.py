@@ -67,40 +67,14 @@ if __name__ == "__main__":
                                        text="Wait please...")
         wait_text.draw()
         estimulus.window.flip()
-        pp.clock.wait(2)
-        pretty = data_stream.chunk(max_samples=2)
-        pretty_imp = impedances_stream.chunk(max_samples=2)
-        please = data_stream.chunk(max_samples=2)
-        please_imp = impedances_stream.chunk(max_samples=2)
-        print("Is {0} this {1} working {2}?".format(
-            np.shape(start), np.shape(pretty), np.shape(please)))
-        print("Imp {0} this {1} working {2}?".format(
-            np.shape(start_imp), np.shape(pretty_imp), np.shape(please_imp)))
+        pp.clock.wait(5)
 
     ## START THE EXPERIMENT ##
-    print("-- EXPERIMENT STARTING --")
+    print("\n -- EXPERIMENT STARTING --")
     # Tell the stream to start
     for s in range(estimulus.num_seq):
-        for e in range(estimulus.num_emojis):
-            # Move blue rectangle and draw everything
-            estimulus.stimuli.items[-1].pos = (
-                estimulus.imXaxis[estimulus.aug_shuffle[s, e]], 0)
-            estimulus.stimuli.draw()
-
-            # Window flip
-            estimulus.window.flip()
-
-            # Wait the aug_dur time
-            pp.clock.wait(estimulus.aug_dur)
-
-            # Draw just the emojis, getting rid of the rectangle
-            estimulus.stimuli.draw_int(0, -1)
-
-            # Window flip
-            estimulus.window.flip()
-
-            # Pause aug_wait time
-            pp.clock.wait(estimulus.aug_wait)
+        # Play sequence number s according to aug_shuffle
+        estimulus.play_seq(s)
 
         # Read the data during the sequence (giving some room for error)
         buffer.add(data_stream.chunk(max_samples=ammount))
@@ -108,11 +82,12 @@ if __name__ == "__main__":
 
         # Save just the last part of the data (the one that has to belong to the trial)
         data = np.asarray(buffer.take_new(ammount))
-        imp_buffer.take_new(ammount)
+        imp_buffer.take_new(ammount, filename="impedances")
         print("The shape of the data array {0}: {1}".format(
             s + 1, np.shape(data)))
 
         # Here we would have the part where the sequence is processed to find the choice
+        # PUT MODEL HERE FOR DATA PROCESSING HAVING data AND estimulus.aug_shuffle INTO ACCOUNT
         choice = 4
 
         # Wait the Inter Sequence Interval time
@@ -122,8 +97,9 @@ if __name__ == "__main__":
     final_choice = choice
 
     # Confirm the choice
-    estimulus.confirm(final_choice)
+    estimulus.confirm(final_choice, transform = False)
 
     # Close everything
     buffer.zip()
+    imp_buffer.zip()
     estimulus.quit()
