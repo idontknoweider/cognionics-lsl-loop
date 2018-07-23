@@ -91,6 +91,7 @@ class Stimuli(object):
         self.first(-position)
         self.invert()
 
+
 class LslStream(object):
     """
     This class creates the basic connection between the computer and a Lab Streaming
@@ -366,15 +367,7 @@ class EmojiStimulus(object):
         # Stimuli window dimensions (px)
         window_dims = window_scaling * monitor_dims
 
-        # Distance of Stimulus square movement, rounded for draw() method
-        if "motion_scaling" in kwargs:
-            motion_scaling = kwargs["motion_scaling"]
-        else:
-            motion_scaling = 0.19
-
-        motion_dim = np.round(window_dims[0] * motion_scaling)
-        print("Motion dim: {0}".format(motion_dim))
-
+        # Stimulus scaling parameter
         if "stimulus_scaling" in kwargs:
             stimulus_scaling = kwargs["stimulus_scaling"]
         else:
