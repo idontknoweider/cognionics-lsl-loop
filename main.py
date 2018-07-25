@@ -18,8 +18,6 @@ from classes import LslStream, Stimuli, LslBuffer, EmojiStimulus
 from functions import dict_bash_kwargs, save_sequence
 
 
-
-
 ## Main ##
 if __name__ == "__main__":
     ## CONNECTION TO STREAM ##
@@ -44,7 +42,7 @@ if __name__ == "__main__":
     print("-- STIMULUS SETUP -- ")
     # Initialise the stimulus
     estimulus = EmojiStimulus()
-    estimulus.experiment_setup(num_trials = 2)
+    estimulus.experiment_setup(num_trials=2)
 
     # Print the shuffling sequence
     print("Emoji stimuli shuffling sequence:")
@@ -86,8 +84,10 @@ if __name__ == "__main__":
             imp_buffer.add(impedances_stream.chunk(max_samples=ammount))
 
             # Save just the last part of the data (the one that has to belong to the trial)
-            data = np.asarray(buffer.take_new(ammount, filename="voltages_t{0}_s{1}_".format(t+1, s+1)))
-            imp_buffer.take_new(ammount, filename="impedances_t{0}_s{1}_".format(t+1, s+1))
+            data = np.asarray(buffer.take_new(
+                ammount, filename="voltages_t{0}_s{1}_".format(t+1, s+1)))
+            imp_buffer.take_new(
+                ammount, filename="impedances_t{0}_s{1}_".format(t+1, s+1))
             print("The shape of the data array {0}: {1}".format(
                 s + 1, np.shape(data)))
 
@@ -106,11 +106,12 @@ if __name__ == "__main__":
 
         # Confirm the choice
         print("\n -- GROUND TRUTH --")
-        confirmation = estimulus.confirm(final_prediction, transform = False)
+        confirmation = estimulus.confirm(final_prediction, transform=False)
 
         # Save the array
         save_file_name = "t{0}_test.txt".format(t+1)
-        save_sequence(save_file_name, estimulus.aug_shuffle, prediction_list, final_prediction, confirmation[0], confirmation[1])
+        save_sequence(save_file_name, estimulus.aug_shuffle, prediction_list,
+                      final_prediction, confirmation[0], confirmation[1])
 
         # Zip the EEG data files
         buffer.zip()

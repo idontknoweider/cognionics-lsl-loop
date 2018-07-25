@@ -89,8 +89,8 @@ def preprocess_erp(erp_array):
             # First index for next chunk is next index
             first_index = i+1
 
-    ## Here we standarise the features' vectors to have the same
-    ##  normal lengths, because we can find anomalous vectors.
+    # Here we standarise the features' vectors to have the same
+    # normal lengths, because we can find anomalous vectors.
 
     # The first element is outside of the experiment, giving just baseline information
     #   As such, we delete it
@@ -114,12 +114,13 @@ def preprocess_erp(erp_array):
                 features[index] = features[index][:, :std_len_1]
         index += 1
 
-    ## Compacting and making feature vectors for the training and testing
+    # Compacting and making feature vectors for the training and testing
     # Start iterating over all the items in the lists
-    iter_ = 0   
+    iter_ = 0
     while not iter_+1 >= len(features):
         # The flatten does the channel concatenation
-        features[iter_] = np.append(features[iter_], features[iter_ + 1], axis = 1).flatten() 
+        features[iter_] = np.append(
+            features[iter_], features[iter_ + 1], axis=1).flatten()
         del(features[iter_ + 1])
         del(rowcol[iter_ + 1])
         del(flags[iter_ + 1])
@@ -136,7 +137,6 @@ def preprocess_erp(erp_array):
     return {"features": features, "rowcol": rowcol, "flags": flags}
 
 
-# Define a function to save the shuffling sequence and the responses
 def save_sequence(file_name, aug_shuffle, prediction_list, final_prediction, confirmation, position):
     """
     This function is intended to help save all the information from the order of the
@@ -159,15 +159,17 @@ def save_sequence(file_name, aug_shuffle, prediction_list, final_prediction, con
         No output.
 
     """
-    
+
     # Open a file with the given name
     file_object = open(file_name, "w")
 
     # Now for each sequence
     for s in range(len(aug_shuffle)):
-        file_object.write("Sequence {0} has random sequence {1}. Predicted {2}. \n".format(s+1, aug_shuffle[s], prediction_list[s]))
+        file_object.write("Sequence {0} has random sequence {1}. Predicted {2}. \n".format(
+            s+1, aug_shuffle[s], prediction_list[s]))
 
     # For the whole trial
-    file_object.write("Prediction was {0}, which was {1}.\n".format(final_prediction, confirmation))
+    file_object.write("Prediction was {0}, which was {1}.\n".format(
+        final_prediction, confirmation))
     if confirmation == False:
         file_object.write("Real position was {0}.".format(position))
