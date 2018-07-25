@@ -324,6 +324,11 @@ class EmojiStimulus(object):
         quit: Closes the PsychoPy's window and quits the PsychoPy's core
         experiment_setup: Set-up an experiment with all the neede parameters. Please,
             refer to that method's documentation to see all the arguments and usage.
+        shuffle: Create a new random array for random augmentation order
+        play_emoji: Draw an augmentation for the emoji in the given position by the
+            shuffle array.
+        play_sequence: Play an entire sequence of augmentations in the order given
+            by the shuffle array
         play: Play the estimuli as set up.
 
 
@@ -422,7 +427,7 @@ class EmojiStimulus(object):
         core.quit()
 
     def experiment_setup(self, pres_duration=5, aug_duration=0.125, aug_wait=0,
-                         inter_seq_interval=0.375, seq_number=5):
+                         inter_seq_interval=0.375, seq_number=5, num_trials=1):
         """
         Set-up an emoji stimuli experiment.
 
@@ -434,6 +439,7 @@ class EmojiStimulus(object):
             aug_wait: Temporal distance between augmentations
             inter_seq_interval: Time between sequences
             seq_number: Number of sequences
+            num_trials: Number of trials
             per_augmentations: Percentage (/100) of augmented squares per block
 
         """
@@ -443,12 +449,17 @@ class EmojiStimulus(object):
         self.aug_wait = aug_wait
         self.iseqi = inter_seq_interval
         self.num_seq = seq_number
+        self.num_trials = num_trials
 
         # Compute the duration of the experiment and get the timing of the events
         self.sequence_duration = (aug_duration + aug_wait) * self.num_emojis
         """ augmentation_times = np.linspace(
             0, self.sequence_duration, self.num_emojis + 1)[:self.num_emojis] """
 
+        # Create sequence randomisation array
+        self.shuffle()
+
+    def shuffle(self):
         # Randomisation for augmentations
         aug_shuffle = np.arange(
             self.num_emojis * seq_number).reshape(seq_number, self.num_emojis)
