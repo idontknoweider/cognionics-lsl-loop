@@ -462,8 +462,8 @@ class EmojiStimulus(object):
     def shuffle(self):
         # Randomisation for augmentations
         aug_shuffle = np.arange(
-            self.num_emojis * seq_number).reshape(seq_number, self.num_emojis)
-        for i in range(seq_number):
+            self.num_emojis * self.num_seq).reshape(self.num_seq, self.num_emojis)
+        for i in range(self.num_seq):
             aug_shuffle[i, :] = np.arange(0, self.num_emojis, 1)
             np.random.shuffle(aug_shuffle[i, :])
         self.aug_shuffle = aug_shuffle
@@ -538,14 +538,41 @@ class EmojiStimulus(object):
             for key in all_keys:
                 if key == "left":
                     response = True
+                    rel_position_final = rel_position
                 elif key == "right":
                     response = False
+                    rel_position_final = self.double_feedback()
 
         # Print and return the response
         print("The user said that the selection of emoji {0} is {1}".format(
             rel_position, response))
-        return response
+        if response == False:
+            print("The user said that emoji {0} was the target".format(rel_position_final))
+            
+        return [response, rel_position_final]
 
+    def double_feedback(self):
+        # If the user told us the emoji is not the right one, ask which one they wanted to spell
+        text = visual.TextStim(win=self.window, pos=[0, -5],
+                               text="From 1 to 7, which emoji was your target?")
+        text.draw()
+
+        # Redraw all emojis
+        for i in range(self.num_emojis):
+            self.stimuli.items[i].draw()
+
+        self.window.flip()
+
+        # Search for key presses
+        response = None
+        while response == None:
+            all_keys = event.getKeys()
+            for key in all_keys:
+                if str(key) in "1234567":
+                    response = key
+        
+        # Return the key
+        return response
 
 class ERPDataset(Dataset):
     """
