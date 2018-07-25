@@ -134,3 +134,40 @@ def preprocess_erp(erp_array):
 
     # Return a dictionary with the feature vectors and labels.
     return {"features": features, "rowcol": rowcol, "flags": flags}
+
+
+# Define a function to save the shuffling sequence and the responses
+def save_sequence(file_name, aug_shuffle, prediction_list, final_prediction, confirmation, position):
+    """
+    This function is intended to help save all the information from the order of the
+    augmentations and the ground truth to a file. The format can be changed since,
+    right now, the format is intended to be easy to read by humans, but can be
+    a bit messy in data analysis
+
+    Input:
+        name: The name of the file's name the data must be saved to
+        aug_shuffle: List with lists of the order of the agumentations.
+        prediction_list: List containing the preditions made by the model that
+            processes the EEG signal.
+        final_prediction: Value containing the position of the final prediction
+            in the trial.
+        confirmation: Boolean equating ground truth and final_prediction
+        position: Position of the chosen emoji. If different from ground truth,
+            more information is added to the file saying which position the target was.
+
+    Output:
+        No output.
+
+    """
+    
+    # Open a file with the given name
+    file_object = open(file_name, "w")
+
+    # Now for each sequence
+    for s in range(len(aug_shuffle)):
+        file_object.write("Sequence {0} has random sequence {1}. Predicted {2}. \n".format(s+1, aug_shuffle[s], prediction_list[s]))
+
+    # For the whole trial
+    file_object.write("Prediction was {0}, which was {1}.\n".format(final_prediction, confirmation))
+    if confirmation == False:
+        file_object.write("Real position was {0}.".format(position))
