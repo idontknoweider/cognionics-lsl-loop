@@ -15,7 +15,10 @@ import psychopy as pp
 
 # Custom imports
 from classes import LslStream, Stimuli, LslBuffer, EmojiStimulus
-from functions import dict_bash_kwargs
+from functions import dict_bash_kwargs, save_sequence
+
+
+
 
 ## Main ##
 if __name__ == "__main__":
@@ -41,7 +44,7 @@ if __name__ == "__main__":
     print("-- STIMULUS SETUP -- ")
     # Initialise the stimulus
     estimulus = EmojiStimulus()
-    estimulus.experiment_setup()
+    estimulus.experiment_setup(num_trials = 2)
 
     # Print the shuffling sequence
     print("Emoji stimuli shuffling sequence:")
@@ -71,35 +74,51 @@ if __name__ == "__main__":
 
     ## START THE EXPERIMENT ##
     print("\n -- EXPERIMENT STARTING --")
+    prediction_list = []
     # Tell the stream to start
-    for s in range(estimulus.num_seq):
-        # Play sequence number s according to aug_shuffle
-        estimulus.play_seq(s)
+    for t in range(estimulus.num_trials):
+        for s in range(estimulus.num_seq):
+            # Play sequence number s according to aug_shuffle
+            estimulus.play_seq(s)
 
-        # Read the data during the sequence (giving some room for error)
-        buffer.add(data_stream.chunk(max_samples=ammount))
-        imp_buffer.add(impedances_stream.chunk(max_samples=ammount))
+            # Read the data during the sequence (giving some room for error)
+            buffer.add(data_stream.chunk(max_samples=ammount))
+            imp_buffer.add(impedances_stream.chunk(max_samples=ammount))
 
-        # Save just the last part of the data (the one that has to belong to the trial)
-        data = np.asarray(buffer.take_new(ammount))
-        imp_buffer.take_new(ammount, filename="impedances")
-        print("The shape of the data array {0}: {1}".format(
-            s + 1, np.shape(data)))
+            # Save just the last part of the data (the one that has to belong to the trial)
+            data = np.asarray(buffer.take_new(ammount, filename="voltages_t{0}_s{1}_".format(t+1, s+1)))
+            imp_buffer.take_new(ammount, filename="impedances_t{0}_s{1}_".format(t+1, s+1))
+            print("The shape of the data array {0}: {1}".format(
+                s + 1, np.shape(data)))
 
-        # Here we would have the part where the sequence is processed to find the choice
-        # PUT MODEL HERE FOR DATA PROCESSING HAVING data AND estimulus.aug_shuffle INTO ACCOUNT
-        choice = 4
+            # Here we would have the part where the sequence is processed to find the choice
+            # PUT MODEL HERE FOR DATA PROCESSING HAVING data AND estimulus.aug_shuffle INTO ACCOUNT
+            prediction_list.append(4)
 
-        # Wait the Inter Sequence Interval time
-        pp.clock.wait(estimulus.iseqi)
+            # Wait the Inter Sequence Interval time
+            pp.clock.wait(estimulus.iseqi)
 
-    # Here we would cramp al the single choices into a final one
-    final_choice = choice
+        # Here we would cramp al the single choices into a final one
+        final_prediction = prediction_list[0]
 
-    # Confirm the choice
-    estimulus.confirm(final_choice, transform = False)
+        # Shuffle again the augmentations
+        estimulus.shuffle()
+
+        # Confirm the choice
+        print("\n -- GROUND TRUTH --")
+        confirmation = estimulus.confirm(final_prediction, transform = False)
+
+        # Save the array
+        save_file_name = "t{0}_test.txt".format(t+1)
+        save_sequence(save_file_name, estimulus.aug_shuffle, prediction_list, final_prediction, confirmation[0], confirmation[1])
+
+        # Zip the EEG data files
+        buffer.zip()
+        imp_buffer.zip()
+
+        # Clear buffers
+        buffer.clear(names=True)
+        imp_buffer.clear(names=True)
 
     # Close everything
-    buffer.zip()
-    imp_buffer.zip()
     estimulus.quit()
