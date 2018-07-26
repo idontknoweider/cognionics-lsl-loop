@@ -60,15 +60,15 @@ if __name__ == "__main__":
 
     ## VIRTUAL COGNIONICS EXCEPTION ##
     # For virtual_cognionics notify the stream
-    if data_stream.inlet.info().name() == "Virtual Cognionics Quick-20":
-        print("Stream is Virtual Cognionics Quick-20")
-        start = data_stream.chunk()
-        start_imp = impedances_stream.chunk()
-        wait_text = pp.visual.TextStim(win=estimulus.window, pos=[0, 0],
-                                       text="Wait please...")
-        wait_text.draw()
-        estimulus.window.flip()
-        pp.clock.wait(5)
+    # if data_stream.inlet.info().name() == "Virtual Cognionics Quick-20":
+    #     print("Stream is Virtual Cognionics Quick-20")
+    #     start = data_stream.chunk()
+    #     start_imp = impedances_stream.chunk()
+    #     wait_text = pp.visual.TextStim(win=estimulus.window, pos=[0, 0],
+    #                                    text="Wait please...")
+    #     wait_text.draw()
+    #     estimulus.window.flip()
+    #     pp.clock.wait(5)
 
     ## START THE EXPERIMENT ##
     print("\n -- EXPERIMENT STARTING --")
