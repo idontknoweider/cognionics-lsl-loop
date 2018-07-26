@@ -237,11 +237,11 @@ class LslBuffer(object):
 
         # Delete data taken if asked
         if delete == True:
-            return_ = self.items[ammount:]
+            return_ = self.items[-ammount:]
             self.items = self.items[:ammount]
             return return_
         else:
-            return self.items[ammount:]
+            return self.items[-ammount:]
 
     def flag(self, size):
         # True if buffer bigger or equal than given size
