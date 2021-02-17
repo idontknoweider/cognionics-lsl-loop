@@ -1,5 +1,9 @@
 # EEG experiment set up with Cognionics data capture using Lab Streaming Layer and stimuli presentation with PsychoPy
 
+## This repo has been archived as of 17th of Feb 2021
+Feel free to fork it and you can still contact me, but right now I am not working in this project anymore.
+
+
 ## Table of contents
 
 - Introduction
